@@ -1,19 +1,17 @@
 package com.example.shopapp.exception;
 
-import java.time.LocalDateTime;
+import lombok.Builder;
+import lombok.Getter;
 
+import java.time.LocalDateTime;
+import java.util.Map;
+
+@Getter
+@Builder
 public class ApiError {
     private int status;
     private String message;
-    private LocalDateTime timestamp;
-
-    public ApiError(int status, String message) {
-        this.status = status;
-        this.message = message;
-        this.timestamp = LocalDateTime.now();
-    }
-
-    public int getStatus() { return status; }
-    public String getMessage() { return message; }
-    public LocalDateTime getTimestamp() { return timestamp; }
+    @Builder.Default
+    private LocalDateTime timestamp = LocalDateTime.now();
+    private Map<String, String> errors;
 }

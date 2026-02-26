@@ -1,2 +1,31 @@
-/mvnw text eol=lf
-*.cmd text eol=crlf
+# Java
+*.java text eol=lf
+
+# XML, YAML, Properties
+*.xml text eol=lf
+*.yml text eol=lf
+*.properties text eol=lf
+
+# SQL scripts
+*.sql text eol=lf
+
+# JSON
+*.json text eol=lf
+
+# Ignore line endings for binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+
+# Maven / Gradle / IDE files
+*.iml text eol=lf
+*.gradle text eol=lf
+build/** text eol=lf
+target/** text eol=lf
+
+# GitHub Actions / shell scripts
+*.sh text eol=lf
+*.bat text eol=crlflf
