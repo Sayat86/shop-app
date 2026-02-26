@@ -1,0 +1,53 @@
+# =========================
+# IDE
+# =========================
+# IntelliJ IDEA
+/.idea/
+/*.iml
+*.iws
+*.ipr
+.settings/
+.springBeans
+.sts4-cache/
+
+# VS Code
+.vscode/
+
+# STS
+.apt_generated
+.classpath
+.factorypath
+.project
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# =========================
+# Build
+# =========================
+# Maven
+/target/
+/pom.xml.tag
+/pom.xml.releaseBackup
+/pom.xml.versionsBackup
+/logs/
+
+# Gradle
+/.gradle/
+/build/
+
+# =========================
+# Logs & OS files
+# =========================
+*.log
+.DS_Store
+Thumbs.db
+
+# =========================
+# Docker
+# =========================
+pgdata/
