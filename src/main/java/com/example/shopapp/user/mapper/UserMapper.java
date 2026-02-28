@@ -6,8 +6,9 @@ import com.example.shopapp.user.dto.UserResponse;
 import com.example.shopapp.user.entity.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.ReportingPolicy;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserMapper {
     User toEntity(CreateUserRequest request);
     UserResponse toResponse(User user);

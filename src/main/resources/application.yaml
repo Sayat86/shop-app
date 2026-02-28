@@ -3,7 +3,7 @@ spring:
     name: shop-app
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/ecommerce
+    url: jdbc:postgresql://localhost:5433/ecommerce
     username: postgres
     password: postgres
     jpa:
