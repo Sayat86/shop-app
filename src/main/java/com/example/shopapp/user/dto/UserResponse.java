@@ -1,10 +1,9 @@
 package com.example.shopapp.user.dto;
 
-import lombok.Data;
-
-@Data
-public class UserResponse {
-    private Long id;
-    private String username;
-    private String email;
-}
+public record UserResponse(
+        Long id,
+        String email,
+        String username,
+        String role,
+        boolean enabled
+) {}
