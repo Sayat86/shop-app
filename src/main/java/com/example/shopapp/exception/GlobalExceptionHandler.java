@@ -1,5 +1,6 @@
 package com.example.shopapp.exception;
 
+import jakarta.persistence.OptimisticLockException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -62,5 +63,16 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    @ExceptionHandler(OptimisticLockException.class)
+    public ResponseEntity<ApiError> handleOptimisticLock(OptimisticLockException ex) {
+
+        ApiError error = ApiError.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .message("Entity was modified by another transaction")
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 }

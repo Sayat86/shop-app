@@ -1,6 +1,7 @@
 package com.example.shopapp.user.dto;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record UpdateUserRequest(
@@ -8,5 +9,8 @@ public record UpdateUserRequest(
         String username,
 
         @Email(message = "Invalid email format")
-        String email
+        String email,
+
+        @NotNull(message = "Version is required")
+        Long version
 ) {}

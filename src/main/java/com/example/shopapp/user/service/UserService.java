@@ -1,6 +1,7 @@
 package com.example.shopapp.user.service;
 
 import com.example.shopapp.exception.BadRequestException;
+import com.example.shopapp.exception.ConflictException;
 import com.example.shopapp.exception.ResourceNotFoundException;
 import com.example.shopapp.user.dto.UpdateUserRequest;
 import com.example.shopapp.user.dto.UserResponse;
@@ -10,6 +11,8 @@ import com.example.shopapp.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +32,12 @@ public class UserService {
 
         User user = getActiveByEmail(email);
 
+        // 🔥 optimistic locking check
+        if (!Objects.equals(user.getVersion(), request.version())) {
+            throw new ConflictException("User was modified by another transaction");
+        }
+
+        // старая логика проверки email
         if (request.email() != null &&
                 !request.email().equals(user.getEmail()) &&
                 userRepository.existsByEmailAndDeletedFalse(request.email())) {

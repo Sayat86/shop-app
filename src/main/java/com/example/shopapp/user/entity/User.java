@@ -20,13 +20,13 @@ public class User {
     @Version
     private Long version;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false) // вместо unique = true добавил в БД UNIQUE INDEX, WHERE deleted = false
     private String email;
 
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false) // вместо unique = true добавил в БД UNIQUE INDEX, WHERE deleted = false
     private String username;
 
     @Enumerated(EnumType.STRING)

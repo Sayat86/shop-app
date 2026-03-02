@@ -11,6 +11,13 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_email ON users(email);
+CREATE UNIQUE INDEX unique_email_active
+    ON users(email)
+    WHERE deleted = false;
+
+CREATE UNIQUE INDEX unique_username_active
+    ON users(username)
+    WHERE deleted = false;
 
 CREATE TABLE categories (
                             id BIGSERIAL PRIMARY KEY,
