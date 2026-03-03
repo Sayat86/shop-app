@@ -7,6 +7,7 @@ import com.example.shopapp.category.mapper.CategoryMapper;
 import com.example.shopapp.category.repository.CategoryRepository;
 import com.example.shopapp.exception.BadRequestException;
 import com.example.shopapp.exception.ResourceNotFoundException;
+import com.example.shopapp.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ public class CategoryService {
 
     private final CategoryRepository repository;
     private final CategoryMapper mapper;
+    private final ProductRepository productRepository;
 
     public CategoryResponse create(CategoryRequest request) {
 
@@ -133,7 +135,23 @@ public class CategoryService {
     }
 
     public void delete(Long id) {
-        repository.deleteById(id);
+
+        Category category = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
+        // 1️⃣ Проверяем дочерние категории
+        boolean hasChildren = repository.existsByParentId(id);
+        if (hasChildren) {
+            throw new BadRequestException("Cannot delete category with subcategories");
+        }
+
+        // 2️⃣ Проверяем активные продукты
+        boolean hasProducts = productRepository.existsByCategoryIdAndDeletedFalse(id);
+        if (hasProducts) {
+            throw new BadRequestException("Cannot delete category with active products");
+        }
+
+        category.setDeleted(true);
     }
 
     private Category getEntity(Long id) {

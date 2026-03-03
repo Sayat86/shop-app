@@ -6,6 +6,7 @@ CREATE TABLE users (
                        last_name VARCHAR(255),
                        role VARCHAR(50) NOT NULL,
                        enabled BOOLEAN DEFAULT TRUE,
+                       deleted boolean not null default false,
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -25,6 +26,7 @@ create table categories (
                             slug varchar(255) not null unique,
                             description text,
                             parent_id bigint,
+                            deleted boolean not null default false,
                             created_at timestamp,
                             updated_at timestamp,
                             constraint fk_parent foreign key (parent_id) references categories(id)
@@ -35,12 +37,13 @@ CREATE INDEX idx_categories_slug ON categories(slug);
 create table products (
                           id bigserial primary key,
                           name varchar(255) not null,
-                          slug varchar(255) not null unique,
+                          slug varchar(255) not null,
                           description text,
                           price numeric(19,2) not null,
                           stock_quantity integer not null,
                           status varchar(50) not null,
                           category_id bigint not null,
+                          deleted boolean not null default false,
                           created_at timestamp,
                           updated_at timestamp,
                           constraint fk_product_category foreign key (category_id)
@@ -56,6 +59,10 @@ create index idx_product_created_at
 create index idx_product_name_trgm
     on products
     using gin (lower(name) gin_trgm_ops);
+
+create unique index idx_product_slug_active
+    on products(slug)
+    where deleted = false;
 
 CREATE TABLE product_images (
                                 id BIGSERIAL PRIMARY KEY,
