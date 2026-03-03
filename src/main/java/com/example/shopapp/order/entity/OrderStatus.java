@@ -1,9 +1,8 @@
 package com.example.shopapp.order.entity;
 
 public enum OrderStatus {
-    NEW,
+    CREATED,
     PAID,
     SHIPPED,
-    COMPLETED,
     CANCELLED
 }

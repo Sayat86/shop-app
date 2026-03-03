@@ -94,21 +94,27 @@ create table cart_items (
                             constraint uq_cart_product unique (cart_id, product_id)
 );
 
-CREATE TABLE orders (
-                        id BIGSERIAL PRIMARY KEY,
-                        user_id BIGINT NOT NULL REFERENCES users(id),
-                        status VARCHAR(30) NOT NULL,
-                        total_amount BIGINT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+create table orders (
+                        id bigserial primary key,
+                        user_id bigint not null,
+                        total_amount numeric(19,2) not null,
+                        status varchar(50) not null,
+                        created_at timestamp not null,
+                        constraint fk_order_user foreign key (user_id)
+                            references users(id)
 );
 
-CREATE TABLE order_items (
-                             id BIGSERIAL PRIMARY KEY,
-                             order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-                             product_id BIGINT,
-                             product_name VARCHAR(255) NOT NULL,
-                             quantity INTEGER NOT NULL,
-                             price BIGINT NOT NULL
+create table order_items (
+                             id bigserial primary key,
+                             order_id bigint not null,
+                             product_id bigint not null,
+                             price numeric(19,2) not null,
+                             quantity integer not null,
+                             subtotal numeric(19,2) not null,
+                             constraint fk_order_item_order foreign key (order_id)
+                                 references orders(id),
+                             constraint fk_order_item_product foreign key (product_id)
+                                 references products(id)
 );
 
 CREATE TABLE payments (
