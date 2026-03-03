@@ -36,6 +36,7 @@ CREATE INDEX idx_categories_slug ON categories(slug);
 
 create table products (
                           id bigserial primary key,
+                          version bigint not null default 0,
                           name varchar(255) not null,
                           slug varchar(255) not null,
                           description text,
@@ -71,18 +72,26 @@ CREATE TABLE product_images (
                                 is_main BOOLEAN DEFAULT FALSE
 );
 
-CREATE TABLE carts (
-                       id BIGSERIAL PRIMARY KEY,
-                       user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+create table carts (
+                       id bigserial primary key,
+                       user_id bigint not null unique,
+                       created_at timestamp,
+                       updated_at timestamp,
+                       constraint fk_cart_user foreign key (user_id)
+                           references users(id)
 );
 
-CREATE TABLE cart_items (
-                            id BIGSERIAL PRIMARY KEY,
-                            cart_id BIGINT NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
-                            product_id BIGINT NOT NULL REFERENCES products(id),
-                            quantity INTEGER NOT NULL,
-                            price BIGINT NOT NULL
+create table cart_items (
+                            id bigserial primary key,
+                            cart_id bigint not null,
+                            product_id bigint not null,
+                            quantity integer not null,
+                            version bigint not null default 0,
+                            constraint fk_cart_item_cart foreign key (cart_id)
+                                references carts(id),
+                            constraint fk_cart_item_product foreign key (product_id)
+                                references products(id),
+                            constraint uq_cart_product unique (cart_id, product_id)
 );
 
 CREATE TABLE orders (

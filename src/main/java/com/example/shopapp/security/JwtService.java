@@ -29,11 +29,16 @@ public class JwtService {
     private String buildToken(User user, long expiration) {
         return Jwts.builder()
                 .setSubject(user.getEmail())
+                .claim("userId", user.getId())   // 👈 добавили
                 .claim("role", user.getRole().name())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public Long extractUserId(String token) {
+        return extractAllClaims(token).get("userId", Long.class);
     }
 
     public String extractUsername(String token) {

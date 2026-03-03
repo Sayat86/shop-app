@@ -37,13 +37,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String token = authHeader.substring(7);
 
-        if (SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (SecurityContextHolder.getContext().getAuthentication() == null
+                && !jwtService.isTokenExpired(token)) {
 
-            String email = jwtService.extractUsername(token);
+            Long userId = jwtService.extractUserId(token);
+            String role = jwtService.extractRole(token);
 
-            if (email != null && !jwtService.isTokenExpired(token)) {
-
-                String role = jwtService.extractRole(token);
+            if (userId != null && role != null) {
 
                 List<GrantedAuthority> authorities = List.of(
                         new SimpleGrantedAuthority(role)
@@ -51,7 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
-                                email,
+                                userId,   // 👈 principal = userId
                                 null,
                                 authorities
                         );

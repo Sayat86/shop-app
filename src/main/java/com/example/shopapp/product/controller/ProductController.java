@@ -3,19 +3,19 @@ package com.example.shopapp.product.controller;
 import com.example.shopapp.product.dto.ProductFilter;
 import com.example.shopapp.product.dto.ProductRequest;
 import com.example.shopapp.product.dto.ProductResponse;
-import com.example.shopapp.product.entity.ProductStatus;
 import com.example.shopapp.product.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.math.BigDecimal;
-import java.net.URI;
-import java.util.List;
+import java.net.URI;;
 
 @RestController
 @RequestMapping("/api/products")
@@ -31,38 +31,31 @@ public class ProductController {
 
         ProductResponse response = service.create(request);
 
-        URI location = URI.create("/api/products/" + response.id());
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(response.id())
+                .toUri();
 
         return ResponseEntity.created(location).body(response);
     }
 
     @GetMapping
-    public Page<ProductResponse> getAll(
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) ProductStatus status,
-            @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice,
-            Pageable pageable
-    ) {
+    public ResponseEntity<Page<ProductResponse>> getAll(
+            ProductFilter filter,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
 
-        ProductFilter filter = new ProductFilter(
-                name,
-                categoryId,
-                status,
-                minPrice,
-                maxPrice
-        );
-
-        return service.getAll(filter, pageable);
+        return ResponseEntity.ok(service.getAll(filter, pageable));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ProductResponse update(
+    public ResponseEntity<ProductResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody ProductRequest request) {
-        return service.update(id, request);
+
+        return ResponseEntity.ok(service.update(id, request));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
