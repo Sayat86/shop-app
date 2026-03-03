@@ -118,6 +118,43 @@ public class OrderService {
         return mapToResponse(order);
     }
 
+    public OrderResponse cancelOrder(Long orderId) {
+
+        Long userId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ROLE_ADMIN");
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        // Если не админ — проверяем владельца
+        if (!isAdmin && !order.getUser().getId().equals(userId)) {
+            throw new BadRequestException("Access denied");
+        }
+
+        // Если не админ — можно отменить только CREATED
+        if (!isAdmin && order.getStatus() != OrderStatus.CREATED) {
+            throw new BadRequestException("Order cannot be cancelled");
+        }
+
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Order already cancelled");
+        }
+
+        // Возвращаем stock
+        for (OrderItem item : order.getItems()) {
+
+            Product product = item.getProduct();
+
+            product.setStockQuantity(
+                    product.getStockQuantity() + item.getQuantity()
+            );
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+
+        return mapToResponse(order);
+    }
+
     private OrderResponse mapToResponse(Order order) {
 
         List<OrderItemResponse> items = order.getItems()

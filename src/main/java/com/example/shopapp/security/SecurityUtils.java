@@ -12,4 +12,13 @@ public final class SecurityUtils {
                 .getAuthentication()
                 .getPrincipal();
     }
+
+    public static boolean hasRole(String role) {
+
+        return SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getAuthorities()
+                .stream()
+                .anyMatch(auth -> auth.getAuthority().equals(role));
+    }
 }
