@@ -19,14 +19,15 @@ CREATE UNIQUE INDEX unique_username_active
     ON users(username)
     WHERE deleted = false;
 
-CREATE TABLE categories (
-                            id BIGSERIAL PRIMARY KEY,
-                            name VARCHAR(255) NOT NULL,
-                            slug VARCHAR(255) NOT NULL UNIQUE,
-                            description TEXT,
-                            parent_id BIGINT REFERENCES categories(id) ON DELETE SET NULL,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+create table categories (
+                            id bigserial primary key,
+                            name varchar(255) not null,
+                            slug varchar(255) not null unique,
+                            description text,
+                            parent_id bigint,
+                            created_at timestamp,
+                            updated_at timestamp,
+                            constraint fk_parent foreign key (parent_id) references categories(id)
 );
 
 CREATE INDEX idx_categories_slug ON categories(slug);
