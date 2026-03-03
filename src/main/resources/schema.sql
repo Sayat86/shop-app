@@ -32,21 +32,30 @@ create table categories (
 
 CREATE INDEX idx_categories_slug ON categories(slug);
 
-CREATE TABLE products (
-                          id BIGSERIAL PRIMARY KEY,
-                          name VARCHAR(255) NOT NULL,
-                          slug VARCHAR(255) NOT NULL UNIQUE,
-                          description TEXT,
-                          price BIGINT NOT NULL,
-                          stock_quantity INTEGER NOT NULL DEFAULT 0,
-                          status VARCHAR(20) NOT NULL,
-                          category_id BIGINT REFERENCES categories(id) ON DELETE SET NULL,
-                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+create table products (
+                          id bigserial primary key,
+                          name varchar(255) not null,
+                          slug varchar(255) not null unique,
+                          description text,
+                          price numeric(19,2) not null,
+                          stock_quantity integer not null,
+                          status varchar(50) not null,
+                          category_id bigint not null,
+                          created_at timestamp,
+                          updated_at timestamp,
+                          constraint fk_product_category foreign key (category_id)
+                              references categories(id)
 );
 
-CREATE INDEX idx_products_slug ON products(slug);
-CREATE INDEX idx_products_category ON products(category_id);
+create index idx_product_category_status_price
+    on products(category_id, status, price);
+
+create index idx_product_created_at
+    on products(created_at);
+
+create index idx_product_name_trgm
+    on products
+    using gin (lower(name) gin_trgm_ops);
 
 CREATE TABLE product_images (
                                 id BIGSERIAL PRIMARY KEY,

@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -30,11 +31,10 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
-    private Long price;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal price;
 
-    @Column(nullable = false)
-    @JoinColumn(name = "stock_quantity")
+    @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity;
 
     @Enumerated(EnumType.STRING)
@@ -42,14 +42,14 @@ public class Product {
     private ProductStatus status;
 
     @CreationTimestamp
-    @JoinColumn(name = "created_at")
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @JoinColumn(name = "updated_at")
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @ManyToOne
-    @JoinColumn(name = "category_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 }
