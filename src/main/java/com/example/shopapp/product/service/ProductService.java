@@ -63,4 +63,35 @@ public class ProductService {
         return repository.findAll(specification, pageable)
                 .map(mapper::toResponse);
     }
+
+    public ProductResponse update(Long id, ProductRequest request) {
+
+        Product product = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        if (!product.getSlug().equals(request.slug())
+                && repository.existsBySlug(request.slug())) {
+            throw new BadRequestException("Slug already exists");
+        }
+
+        Category category = categoryRepository.findById(request.categoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
+        product.setName(request.name());
+        product.setSlug(request.slug());
+        product.setDescription(request.description());
+        product.setPrice(request.price());
+        product.setStockQuantity(request.stockQuantity());
+        product.setStatus(request.status());
+        product.setCategory(category);
+
+        return mapper.toResponse(repository.save(product));
+    }
+
+    public void delete(Long id) {
+        if (!repository.existsById(id)) {
+            throw new ResourceNotFoundException("Product not found");
+        }
+        repository.deleteById(id);
+    }
 }

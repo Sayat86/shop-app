@@ -15,7 +15,7 @@ import java.util.Date;
 public class JwtService {
 
     private final String SECRET_KEY = "very-secret-key-very-secret-key-very-secret-key";
-    private final long ACCESS_TOKEN_EXPIRATION = 1000 * 60 * 60; // 1h
+    private final long ACCESS_TOKEN_EXPIRATION = 1000 * 60 * 15; // 15min
     private final long REFRESH_TOKEN_EXPIRATION = 1000 * 60 * 60 * 24; // 24h
 
     public String generateToken(User user) {
@@ -45,7 +45,7 @@ public class JwtService {
         return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
     }
 
-    private boolean isTokenExpired(String token) {
+    public boolean isTokenExpired(String token) {
         return extractAllClaims(token)
                 .getExpiration()
                 .before(new Date());
@@ -62,5 +62,9 @@ public class JwtService {
     private Key getSignKey() {
         byte[] keyBytes = SECRET_KEY.getBytes();
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public String extractRole(String token) {
+        return extractAllClaims(token).get("role", String.class);
     }
 }
