@@ -100,38 +100,15 @@ public class CategoryService {
         return roots;
     }
 
-
     public CategoryResponse update(Long id, CategoryRequest request) {
 
         Category category = getEntity(id);
 
-        if (!category.getSlug().equals(request.slug())
-                && repository.existsBySlug(request.slug())) {
-            throw new BadRequestException("Slug already exists");
-        }
+        validateSlug(request.slug(), category.getId());
+        updateBasicFields(category, request);
+        updateParent(category, request.parentId());
 
-        category.setName(request.name());
-        category.setSlug(request.slug());
-        category.setDescription(request.description());
-
-        if (request.parentId() != null) {
-
-            if (request.parentId().equals(id)) {
-                throw new BadRequestException("Category cannot be parent of itself");
-            }
-
-            Category parent = getEntity(request.parentId());
-
-            if (isChildOf(parent, category)) {
-                throw new BadRequestException("Circular hierarchy detected");
-            }
-
-            category.setParent(parent);
-        } else {
-            category.setParent(null);
-        }
-
-        return mapper.toResponse(repository.save(category));
+        return mapper.toResponse(category);
     }
 
     public void delete(Long id) {
@@ -171,5 +148,45 @@ public class CategoryService {
         }
 
         return false;
+    }
+
+    private void validateSlug(String newSlug, Long currentId) {
+
+        if (!repository.existsBySlug(newSlug)) {
+            return;
+        }
+
+        Category existing = repository.findBySlug(newSlug)
+                .orElseThrow(); // теоретически не случится
+
+        if (!existing.getId().equals(currentId)) {
+            throw new BadRequestException("Slug already exists");
+        }
+    }
+
+    private void updateBasicFields(Category category, CategoryRequest request) {
+        category.setName(request.name());
+        category.setSlug(request.slug());
+        category.setDescription(request.description());
+    }
+
+    private void updateParent(Category category, Long parentId) {
+
+        if (parentId == null) {
+            category.setParent(null);
+            return;
+        }
+
+        if (parentId.equals(category.getId())) {
+            throw new BadRequestException("Category cannot be parent of itself");
+        }
+
+        Category parent = getEntity(parentId);
+
+        if (isChildOf(parent, category)) {
+            throw new BadRequestException("Circular hierarchy detected");
+        }
+
+        category.setParent(parent);
     }
 }

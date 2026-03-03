@@ -14,5 +14,4 @@ public interface CategoryMapper {
     @Mapping(target = "children", ignore = true)
     CategoryResponse toResponse(Category category);
 
-    List<CategoryResponse> toResponseList(List<Category> categories);
 }
