@@ -5,16 +5,19 @@ import com.example.shopapp.cart.entity.CartItem;
 import com.example.shopapp.cart.repository.CartRepository;
 import com.example.shopapp.exception.BadRequestException;
 import com.example.shopapp.exception.ResourceNotFoundException;
+import com.example.shopapp.order.dto.OrderFilter;
 import com.example.shopapp.order.dto.OrderItemResponse;
 import com.example.shopapp.order.dto.OrderResponse;
 import com.example.shopapp.order.entity.Order;
 import com.example.shopapp.order.entity.OrderItem;
 import com.example.shopapp.order.entity.OrderStatus;
 import com.example.shopapp.order.repository.OrderRepository;
+import com.example.shopapp.order.specification.OrderSpecification;
 import com.example.shopapp.product.entity.Product;
-import com.example.shopapp.product.repository.ProductRepository;
 import com.example.shopapp.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +31,6 @@ public class OrderService {
 
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
-    private final ProductRepository productRepository;
 
     public OrderResponse createOrderFromCart() {
 
@@ -92,15 +94,33 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResponse> getMyOrders() {
+    public Page<OrderResponse> getAllOrders(
+            OrderFilter filter,
+            Pageable pageable
+    ) {
+
+        return orderRepository
+                .findAll(
+                        OrderSpecification.withFilters(null, filter),
+                        pageable
+                )
+                .map(this::mapToResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrderResponse> getMyOrders(
+            OrderFilter filter,
+            Pageable pageable
+    ) {
 
         Long userId = SecurityUtils.getCurrentUserId();
 
         return orderRepository
-                .findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+                .findAll(
+                        OrderSpecification.withFilters(userId, filter),
+                        pageable
+                )
+                .map(this::mapToResponse);
     }
 
     @Transactional(readOnly = true)
