@@ -136,3 +136,12 @@ CREATE TABLE refresh_tokens (
                                 revoked BOOLEAN NOT NULL DEFAULT FALSE,
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+create table order_history (
+                               id bigserial primary key,
+                               order_id bigint not null,
+                               event_type varchar(50) not null,
+                               created_at timestamp,
+                               constraint fk_order_history_order
+                                   foreign key (order_id) references orders(id)
+);

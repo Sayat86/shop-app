@@ -6,11 +6,11 @@ import com.example.shopapp.cart.repository.CartRepository;
 import com.example.shopapp.exception.BadRequestException;
 import com.example.shopapp.exception.ResourceNotFoundException;
 import com.example.shopapp.order.dto.OrderFilter;
+import com.example.shopapp.order.dto.OrderHistoryResponse;
 import com.example.shopapp.order.dto.OrderItemResponse;
 import com.example.shopapp.order.dto.OrderResponse;
-import com.example.shopapp.order.entity.Order;
-import com.example.shopapp.order.entity.OrderItem;
-import com.example.shopapp.order.entity.OrderStatus;
+import com.example.shopapp.order.entity.*;
+import com.example.shopapp.order.repository.OrderHistoryRepository;
 import com.example.shopapp.order.repository.OrderRepository;
 import com.example.shopapp.order.specification.OrderSpecification;
 import com.example.shopapp.product.entity.Product;
@@ -32,6 +32,7 @@ public class OrderService {
 
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
+    private final OrderHistoryRepository orderHistoryRepository;
 
     public OrderResponse createOrderFromCart() {
 
@@ -88,6 +89,7 @@ public class OrderService {
         order.setTotalAmount(total);
 
         Order savedOrder = orderRepository.save(order);
+        recordEvent(savedOrder, OrderEventType.ORDER_CREATED);
 
         // очищаем корзину
         cart.getItems().clear();
@@ -148,16 +150,11 @@ public class OrderService {
         }
 
         // Возвращаем stock
-        for (OrderItem item : order.getItems()) {
-
-            Product product = item.getProduct();
-
-            product.setStockQuantity(
-                    product.getStockQuantity() + item.getQuantity()
-            );
-        }
+        restoreStock(order);
 
         order.changeStatus(OrderStatus.CANCELLED);
+
+        recordEvent(order, OrderEventType.ORDER_CANCELLED);
 
         return mapToResponse(order);
     }
@@ -183,6 +180,8 @@ public class OrderService {
 
         order.changeStatus(OrderStatus.PAID);
 
+        recordEvent(order, OrderEventType.ORDER_PAID);
+
         return mapToResponse(order);
     }
 
@@ -192,6 +191,8 @@ public class OrderService {
 
         order.changeStatus(OrderStatus.SHIPPED);
 
+        recordEvent(order, OrderEventType.ORDER_SHIPPED);
+
         return mapToResponse(order);
     }
 
@@ -200,18 +201,35 @@ public class OrderService {
         Order order = getByOrderNumber(orderNumber);
 
         // вернуть stock
-        for (OrderItem item : order.getItems()) {
-
-            Product product = item.getProduct();
-
-            product.setStockQuantity(
-                    product.getStockQuantity() + item.getQuantity()
-            );
-        }
+        restoreStock(order);
 
         order.changeStatus(OrderStatus.CANCELLED);
 
+        recordEvent(order, OrderEventType.ORDER_CANCELLED);
+
         return mapToResponse(order);
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderHistoryResponse> getOrderHistory(String orderNumber) {
+
+        Order order = getByOrderNumber(orderNumber);
+
+        Long userId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ROLE_ADMIN");
+
+        if (!isAdmin && !order.getUser().getId().equals(userId)) {
+            throw new BadRequestException("Access denied");
+        }
+
+        return orderHistoryRepository
+                .findByOrderIdOrderByCreatedAtAsc(order.getId())
+                .stream()
+                .map(h -> new OrderHistoryResponse(
+                        h.getEventType(),
+                        h.getCreatedAt()
+                ))
+                .toList();
     }
 
     private OrderResponse mapToResponse(Order order) {
@@ -243,5 +261,27 @@ public class OrderService {
     private Order getByOrderNumber(String orderNumber) {
         return orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+    }
+
+    private void recordEvent(Order order, OrderEventType eventType) {
+
+        OrderHistory history = OrderHistory.builder()
+                .order(order)
+                .eventType(eventType)
+                .build();
+
+        orderHistoryRepository.save(history);
+    }
+
+    private void restoreStock(Order order) {
+
+        for (OrderItem item : order.getItems()) {
+
+            Product product = item.getProduct();
+
+            product.setStockQuantity(
+                    product.getStockQuantity() + item.getQuantity()
+            );
+        }
     }
 }

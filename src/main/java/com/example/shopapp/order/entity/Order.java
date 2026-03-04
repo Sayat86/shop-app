@@ -51,6 +51,10 @@ public class Order {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<OrderHistory> history = new ArrayList<>();
+
     public void changeStatus(OrderStatus newStatus) {
 
         if (!this.status.canTransitionTo(newStatus)) {

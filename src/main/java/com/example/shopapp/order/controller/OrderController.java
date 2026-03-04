@@ -1,6 +1,7 @@
 package com.example.shopapp.order.controller;
 
 import com.example.shopapp.order.dto.OrderFilter;
+import com.example.shopapp.order.dto.OrderHistoryResponse;
 import com.example.shopapp.order.dto.OrderResponse;
 import com.example.shopapp.order.entity.OrderStatus;
 import com.example.shopapp.order.service.OrderService;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -72,5 +74,12 @@ public class OrderController {
             @PathVariable String orderNumber
     ) {
         return ResponseEntity.ok(service.getOrderByNumber(orderNumber));
+    }
+
+    @GetMapping("/{orderNumber}/history")
+    public ResponseEntity<List<OrderHistoryResponse>> getOrderHistory(
+            @PathVariable String orderNumber
+    ) {
+        return ResponseEntity.ok(service.getOrderHistory(orderNumber));
     }
 }
