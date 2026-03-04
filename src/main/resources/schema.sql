@@ -45,6 +45,7 @@ create table products (
                           status varchar(50) not null,
                           category_id bigint not null,
                           deleted boolean not null default false,
+                          views BIGINT NOT NULL DEFAULT 0;
                           created_at timestamp,
                           updated_at timestamp,
                           constraint fk_product_category foreign key (category_id)
@@ -64,6 +65,30 @@ create index idx_product_name_trgm
 create unique index idx_product_slug_active
     on products(slug)
     where deleted = false;
+
+-- категория + фильтры
+CREATE INDEX idx_product_category_status_price
+    ON products(category_id, status, price);
+
+-- сортировка
+CREATE INDEX idx_product_created_at
+    ON products(created_at DESC);
+
+-- популярные товары
+CREATE INDEX idx_product_views
+    ON products(views DESC);
+
+-- slug
+CREATE UNIQUE INDEX idx_product_slug_active
+    ON products(slug)
+    WHERE deleted = false;
+
+-- поиск
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE INDEX idx_product_name_trgm
+    ON products
+    USING gin (lower(name) gin_trgm_ops);
 
 create table product_images (
                                 id bigserial primary key,

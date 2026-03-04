@@ -52,6 +52,15 @@ public class Product {
     @Column(nullable = false)
     private boolean deleted = false;
 
+    @Column(nullable = false)
+    private Long views = 0L;
+
+    @Column(nullable = false)
+    private Double averageRating = 0.0;
+
+    @Column(nullable = false)
+    private Integer reviewCount = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

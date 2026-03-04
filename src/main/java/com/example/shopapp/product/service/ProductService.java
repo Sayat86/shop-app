@@ -4,6 +4,7 @@ import com.example.shopapp.category.entity.Category;
 import com.example.shopapp.category.repository.CategoryRepository;
 import com.example.shopapp.exception.BadRequestException;
 import com.example.shopapp.exception.ResourceNotFoundException;
+import com.example.shopapp.product.dto.ProductCardResponse;
 import com.example.shopapp.product.dto.ProductFilter;
 import com.example.shopapp.product.dto.ProductRequest;
 import com.example.shopapp.product.dto.ProductResponse;
@@ -14,10 +15,13 @@ import com.example.shopapp.product.repository.ProductRepository;
 import com.example.shopapp.product.specification.ProductSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 
 @Service
@@ -32,12 +36,9 @@ public class ProductService {
 
     public ProductResponse create(ProductRequest request) {
 
-        if (repository.existsBySlug(request.slug())) {
-            throw new BadRequestException("Slug already exists");
-        }
+        validateSlug(request.slug(), null);
 
-        Category category = categoryRepository.findById(request.categoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+        Category category = getCategoryOrThrow(request.categoryId());
 
         Product product = Product.builder()
                 .name(request.name())
@@ -67,16 +68,11 @@ public class ProductService {
 
     public ProductResponse update(Long id, ProductRequest request) {
 
-        Product product = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+        Product product = getProductOrThrow(id);
 
-        if (!product.getSlug().equals(request.slug())
-                && repository.existsBySlug(request.slug())) {
-            throw new BadRequestException("Slug already exists");
-        }
+        validateSlug(request.slug(), product.getSlug());
 
-        Category category = categoryRepository.findById(request.categoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+        Category category = getCategoryOrThrow(request.categoryId());
 
         product.setName(request.name());
         product.setSlug(request.slug());
@@ -90,10 +86,73 @@ public class ProductService {
     }
 
     public void delete(Long id) {
-        Product product = repository.findById(id)
+        Product product = getProductOrThrow(id);
+
+        product.setDeleted(true);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductResponse> getRelatedProducts(String slug, int limit) {
+
+        Product product = repository.findBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-        repository.save(product);
+        Page<Product> related = repository.findRelatedProducts(
+                product.getCategory().getId(),
+                product.getId(),
+                PageRequest.of(0, limit)
+        );
+
+        return related.stream()
+                .map(this::mapProductWithImage)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ProductResponse getBySlug(String slug) {
+
+        Product product = repository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        repository.incrementViews(product.getId());
+
+        return mapProductWithImage(product);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductResponse> getPopularProducts(int limit) {
+
+        Page<Product> products =
+                repository.findByDeletedFalseOrderByViewsDesc(
+                        PageRequest.of(0, limit)
+                );
+
+        return products.stream()
+                .map(this::mapProductWithImage)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductCardResponse> getProductCards(Pageable pageable) {
+
+        return repository.findProductCards(pageable);
+    }
+
+    private Product getProductOrThrow(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+    }
+
+    private Category getCategoryOrThrow(Long id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+    }
+
+    private void validateSlug(String newSlug, String currentSlug) {
+
+        if (!newSlug.equals(currentSlug) && repository.existsBySlug(newSlug)) {
+            throw new BadRequestException("Slug already exists");
+        }
     }
 
     private ProductResponse mapProductWithImage(Product product) {

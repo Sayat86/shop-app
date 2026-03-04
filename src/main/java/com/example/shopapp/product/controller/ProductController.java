@@ -1,5 +1,6 @@
 package com.example.shopapp.product.controller;
 
+import com.example.shopapp.product.dto.ProductCardResponse;
 import com.example.shopapp.product.dto.ProductFilter;
 import com.example.shopapp.product.dto.ProductRequest;
 import com.example.shopapp.product.dto.ProductResponse;
@@ -15,7 +16,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.net.URI;;
+import java.net.URI;
+import java.util.List;;
 
 @RestController
 @RequestMapping("/api/products")
@@ -63,5 +65,38 @@ public class ProductController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<ProductResponse> getBySlug(
+            @PathVariable String slug
+    ) {
+
+        return ResponseEntity.ok(service.getBySlug(slug));
+    }
+
+    @GetMapping("/slug/{slug}/related")
+    public ResponseEntity<List<ProductResponse>> getRelatedProducts(
+            @PathVariable String slug,
+            @RequestParam(defaultValue = "4") int limit
+    ) {
+
+        return ResponseEntity.ok(service.getRelatedProducts(slug, limit));
+    }
+
+    @GetMapping("/popular")
+    public ResponseEntity<List<ProductResponse>> getPopularProducts(
+            @RequestParam(defaultValue = "8") int limit
+    ) {
+
+        return ResponseEntity.ok(service.getPopularProducts(limit));
+    }
+
+    @GetMapping("/catalog")
+    public ResponseEntity<Page<ProductCardResponse>> getCatalog(
+            Pageable pageable
+    ) {
+
+        return ResponseEntity.ok(service.getProductCards(pageable));
     }
 }
