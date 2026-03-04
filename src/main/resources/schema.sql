@@ -65,11 +65,14 @@ create unique index idx_product_slug_active
     on products(slug)
     where deleted = false;
 
-CREATE TABLE product_images (
-                                id BIGSERIAL PRIMARY KEY,
-                                product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-                                image_url TEXT NOT NULL,
-                                is_main BOOLEAN DEFAULT FALSE
+create table product_images (
+                                id bigserial primary key,
+                                product_id bigint not null,
+                                url text not null,
+                                main_image boolean not null default false,
+                                created_at timestamp,
+                                constraint fk_product_image_product
+                                    foreign key (product_id) references products(id)
 );
 
 create table carts (
