@@ -8,10 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 
@@ -35,5 +32,26 @@ public class AdminOrderController {
         return ResponseEntity.ok(
                 service.getAllOrders(filter, pageable)
         );
+    }
+
+    @PostMapping("/{orderNumber}/pay")
+    public ResponseEntity<OrderResponse> markPaid(
+            @PathVariable String orderNumber) {
+
+        return ResponseEntity.ok(service.markPaid(orderNumber));
+    }
+
+    @PostMapping("/{orderNumber}/ship")
+    public ResponseEntity<OrderResponse> shipOrder(
+            @PathVariable String orderNumber) {
+
+        return ResponseEntity.ok(service.shipOrder(orderNumber));
+    }
+
+    @PostMapping("/{orderNumber}/cancel")
+    public ResponseEntity<OrderResponse> cancelOrder(
+            @PathVariable String orderNumber) {
+
+        return ResponseEntity.ok(service.adminCancelOrder(orderNumber));
     }
 }

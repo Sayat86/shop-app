@@ -177,6 +177,43 @@ public class OrderService {
         return mapToResponse(order);
     }
 
+    public OrderResponse markPaid(String orderNumber) {
+
+        Order order = getByOrderNumber(orderNumber);
+
+        order.changeStatus(OrderStatus.PAID);
+
+        return mapToResponse(order);
+    }
+
+    public OrderResponse shipOrder(String orderNumber) {
+
+        Order order = getByOrderNumber(orderNumber);
+
+        order.changeStatus(OrderStatus.SHIPPED);
+
+        return mapToResponse(order);
+    }
+
+    public OrderResponse adminCancelOrder(String orderNumber) {
+
+        Order order = getByOrderNumber(orderNumber);
+
+        // вернуть stock
+        for (OrderItem item : order.getItems()) {
+
+            Product product = item.getProduct();
+
+            product.setStockQuantity(
+                    product.getStockQuantity() + item.getQuantity()
+            );
+        }
+
+        order.changeStatus(OrderStatus.CANCELLED);
+
+        return mapToResponse(order);
+    }
+
     private OrderResponse mapToResponse(Order order) {
 
         List<OrderItemResponse> items = order.getItems()
