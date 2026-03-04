@@ -37,58 +37,66 @@ CREATE INDEX idx_categories_slug ON categories(slug);
 create table products (
                           id bigserial primary key,
                           version bigint not null default 0,
+
                           name varchar(255) not null,
                           slug varchar(255) not null,
                           description text,
+
                           price numeric(19,2) not null,
                           stock_quantity integer not null,
+
                           status varchar(50) not null,
+
                           category_id bigint not null,
+                          brand_id bigint not null,
+
                           deleted boolean not null default false,
-                          views BIGINT NOT NULL DEFAULT 0;
+
+                          views bigint not null default 0,
+                          average_rating double precision not null default 0,
+                          review_count integer not null default 0,
+
                           created_at timestamp,
                           updated_at timestamp,
-                          constraint fk_product_category foreign key (category_id)
-                              references categories(id)
+
+                          constraint fk_product_category
+                              foreign key (category_id)
+                                  references categories(id),
+
+                          constraint fk_product_brand
+                              foreign key (brand_id)
+                                  references brands(id)
 );
 
+-- категория + фильтры
 create index idx_product_category_status_price
     on products(category_id, status, price);
 
+-- сортировка
 create index idx_product_created_at
-    on products(created_at);
+    on products(created_at desc);
 
-create index idx_product_name_trgm
-    on products
-    using gin (lower(name) gin_trgm_ops);
+-- популярные товары
+create index idx_product_views
+    on products(views desc);
 
+-- slug (для soft delete)
 create unique index idx_product_slug_active
     on products(slug)
     where deleted = false;
 
--- категория + фильтры
-CREATE INDEX idx_product_category_status_price
-    ON products(category_id, status, price);
-
--- сортировка
-CREATE INDEX idx_product_created_at
-    ON products(created_at DESC);
-
--- популярные товары
-CREATE INDEX idx_product_views
-    ON products(views DESC);
-
--- slug
-CREATE UNIQUE INDEX idx_product_slug_active
-    ON products(slug)
-    WHERE deleted = false;
-
 -- поиск
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
+create extension if not exists pg_trgm;
 
-CREATE INDEX idx_product_name_trgm
-    ON products
-    USING gin (lower(name) gin_trgm_ops);
+create index idx_product_category
+    on products(category_id);
+
+create index idx_product_brand
+    on products(brand_id);
+
+create index idx_product_name_trgm
+    on products
+    using gin (lower(name) gin_trgm_ops);
 
 create table product_images (
                                 id bigserial primary key,
@@ -173,3 +181,52 @@ create table order_history (
                                constraint fk_order_history_order
                                    foreign key (order_id) references orders(id)
 );
+
+create table brands (
+                        id bigserial primary key,
+                        name varchar(255) not null,
+                        slug varchar(255) not null unique,
+                        created_at timestamp
+);
+
+create table product_variants (
+                                  id bigserial primary key,
+                                  sku varchar(255) not null unique,
+                                  price numeric(19,2) not null,
+                                  stock_quantity integer not null,
+                                  product_id bigint not null,
+                                  created_at timestamp,
+                                  constraint fk_variant_product
+                                      foreign key (product_id)
+                                          references products(id)
+);
+
+create index idx_variant_product
+    on product_variants(product_id);
+
+create index idx_variant_sku
+    on product_variants(sku);
+
+create table variant_attributes (
+                                    id bigserial primary key,
+                                    name varchar(255) not null
+);
+
+create table variant_attribute_values (
+                                          id bigserial primary key,
+                                          variant_id bigint not null,
+                                          attribute_id bigint not null,
+                                          value varchar(255) not null,
+                                          constraint fk_variant_attr_variant
+                                              foreign key (variant_id)
+                                                  references product_variants(id),
+                                          constraint fk_variant_attr_attribute
+                                              foreign key (attribute_id)
+                                                  references variant_attributes(id)
+);
+
+create index idx_variant_attr_variant
+    on variant_attribute_values(variant_id);
+
+create index idx_variant_attr_attribute
+    on variant_attribute_values(attribute_id);

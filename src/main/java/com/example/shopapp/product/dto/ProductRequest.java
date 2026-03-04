@@ -27,6 +27,8 @@ public record ProductRequest(
         ProductStatus status,
 
         @NotNull
-        Long categoryId
+        Long categoryId,
+
+        Long brandId
 
 ) {}

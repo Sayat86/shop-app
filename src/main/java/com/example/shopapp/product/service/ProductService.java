@@ -1,5 +1,7 @@
 package com.example.shopapp.product.service;
 
+import com.example.shopapp.brand.entity.Brand;
+import com.example.shopapp.brand.repository.BrandRepository;
 import com.example.shopapp.category.entity.Category;
 import com.example.shopapp.category.repository.CategoryRepository;
 import com.example.shopapp.exception.BadRequestException;
@@ -33,12 +35,15 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductMapper mapper;
     private final ProductImageRepository imageRepository;
+    private final BrandRepository brandRepository;
 
     public ProductResponse create(ProductRequest request) {
 
         validateSlug(request.slug(), null);
 
         Category category = getCategoryOrThrow(request.categoryId());
+
+        Brand brand = getBrandOrThrow(request.brandId());
 
         Product product = Product.builder()
                 .name(request.name())
@@ -47,6 +52,7 @@ public class ProductService {
                 .price(request.price())
                 .stockQuantity(request.stockQuantity())
                 .status(request.status())
+                .brand(brand)
                 .category(category)
                 .build();
 
@@ -138,6 +144,11 @@ public class ProductService {
         return repository.findProductCards(pageable);
     }
 
+    private Brand getBrandOrThrow(Long id) {
+        return brandRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Brand not found"));
+    }
+
     private Product getProductOrThrow(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
@@ -173,6 +184,7 @@ public class ProductService {
                 response.status(),
                 response.categoryId(),
                 mainImage,
+                response.brandName(),
                 response.createdAt(),
                 response.updatedAt()
         );

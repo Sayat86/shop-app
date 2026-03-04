@@ -17,6 +17,7 @@ public record ProductResponse(
         Long categoryId,
 
         String mainImageUrl,
+        String brandName,
 
         LocalDateTime createdAt,
         LocalDateTime updatedAt
