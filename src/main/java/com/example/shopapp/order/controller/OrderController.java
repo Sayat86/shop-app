@@ -32,7 +32,7 @@ public class OrderController {
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
-                .buildAndExpand(response.orderId())
+                .buildAndExpand(response.orderNumber())
                 .toUri();
 
         return ResponseEntity
@@ -60,17 +60,17 @@ public class OrderController {
         );
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<OrderResponse> getOrderById(
-            @PathVariable Long id) {
-
-        return ResponseEntity.ok(service.getOrderById(id));
-    }
-
     @PutMapping("/{id}/cancel")
     public ResponseEntity<OrderResponse> cancelOrder(
             @PathVariable Long id) {
 
         return ResponseEntity.ok(service.cancelOrder(id));
+    }
+
+    @GetMapping("/{orderNumber}")
+    public ResponseEntity<OrderResponse> getOrder(
+            @PathVariable String orderNumber
+    ) {
+        return ResponseEntity.ok(service.getOrderByNumber(orderNumber));
     }
 }

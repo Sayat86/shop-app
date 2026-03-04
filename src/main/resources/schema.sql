@@ -96,6 +96,7 @@ create table cart_items (
 
 create table orders (
                         id bigserial primary key,
+                        order_number varchar(50) UNIQUE,
                         user_id bigint not null,
                         total_amount numeric(19,2) not null,
                         status varchar(50) not null,

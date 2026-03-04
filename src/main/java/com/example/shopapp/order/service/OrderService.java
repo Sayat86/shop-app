@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +45,7 @@ public class OrderService {
         }
 
         Order order = Order.builder()
+                .orderNumber(generateOrderNumber())
                 .user(cart.getUser())
                 .status(OrderStatus.CREATED)
                 .build();
@@ -123,21 +125,6 @@ public class OrderService {
                 .map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
-    public OrderResponse getOrderById(Long orderId) {
-
-        Long userId = SecurityUtils.getCurrentUserId();
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-
-        if (!order.getUser().getId().equals(userId)) {
-            throw new BadRequestException("Access denied");
-        }
-
-        return mapToResponse(order);
-    }
-
     public OrderResponse cancelOrder(Long orderId) {
 
         Long userId = SecurityUtils.getCurrentUserId();
@@ -170,7 +157,22 @@ public class OrderService {
             );
         }
 
-        order.setStatus(OrderStatus.CANCELLED);
+        order.changeStatus(OrderStatus.CANCELLED);
+
+        return mapToResponse(order);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderResponse getOrderByNumber(String orderNumber) {
+
+        Order order = getByOrderNumber(orderNumber);
+
+        Long userId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ROLE_ADMIN");
+
+        if (!isAdmin && !order.getUser().getId().equals(userId)) {
+            throw new BadRequestException("Access denied");
+        }
 
         return mapToResponse(order);
     }
@@ -189,11 +191,20 @@ public class OrderService {
                 .toList();
 
         return new OrderResponse(
-                order.getId(),
+                order.getOrderNumber(),
                 order.getStatus(),
                 order.getTotalAmount(),
                 items,
                 order.getCreatedAt()
         );
+    }
+
+    private String generateOrderNumber() {
+        return "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    private Order getByOrderNumber(String orderNumber) {
+        return orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 }
