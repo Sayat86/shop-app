@@ -15,6 +15,9 @@ public record ProductResponse(
         Integer stockQuantity,
         ProductStatus status,
         Long categoryId,
+
+        String mainImageUrl,
+
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 

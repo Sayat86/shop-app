@@ -65,6 +65,10 @@ public class ProductImageService {
 
         String url = storageService.storeProductImage(file);
 
+        if (mainImage) {
+            imageRepository.clearMainImage(productId);
+        }
+
         ProductImage image = ProductImage.builder()
                 .product(product)
                 .url(url)

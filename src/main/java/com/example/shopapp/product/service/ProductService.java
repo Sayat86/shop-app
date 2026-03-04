@@ -9,6 +9,7 @@ import com.example.shopapp.product.dto.ProductRequest;
 import com.example.shopapp.product.dto.ProductResponse;
 import com.example.shopapp.product.entity.Product;
 import com.example.shopapp.product.mapper.ProductMapper;
+import com.example.shopapp.product.repository.ProductImageRepository;
 import com.example.shopapp.product.repository.ProductRepository;
 import com.example.shopapp.product.specification.ProductSpecification;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class ProductService {
     private final ProductRepository repository;
     private final CategoryRepository categoryRepository;
     private final ProductMapper mapper;
+    private final ProductImageRepository imageRepository;
 
     public ProductResponse create(ProductRequest request) {
 
@@ -60,7 +62,7 @@ public class ProductService {
                 ProductSpecification.withFilters(filter);
 
         return repository.findAll(specification, pageable)
-                .map(mapper::toResponse);
+                .map(this::mapProductWithImage);
     }
 
     public ProductResponse update(Long id, ProductRequest request) {
@@ -91,6 +93,29 @@ public class ProductService {
         Product product = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-        product.setDeleted(true);
+        repository.save(product);
+    }
+
+    private ProductResponse mapProductWithImage(Product product) {
+
+        ProductResponse response = mapper.toResponse(product);
+
+        String mainImage = imageRepository
+                .findMainImageUrl(product.getId())
+                .orElse(null);
+
+        return new ProductResponse(
+                response.id(),
+                response.name(),
+                response.slug(),
+                response.description(),
+                response.price(),
+                response.stockQuantity(),
+                response.status(),
+                response.categoryId(),
+                mainImage,
+                response.createdAt(),
+                response.updatedAt()
+        );
     }
 }
