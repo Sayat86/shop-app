@@ -6,15 +6,17 @@ import com.example.shopapp.category.entity.Category;
 import com.example.shopapp.category.repository.CategoryRepository;
 import com.example.shopapp.exception.BadRequestException;
 import com.example.shopapp.exception.ResourceNotFoundException;
-import com.example.shopapp.product.dto.ProductCardResponse;
-import com.example.shopapp.product.dto.ProductFilter;
-import com.example.shopapp.product.dto.ProductRequest;
-import com.example.shopapp.product.dto.ProductResponse;
+import com.example.shopapp.product.dto.*;
 import com.example.shopapp.product.entity.Product;
+import com.example.shopapp.product.entity.ProductImage;
 import com.example.shopapp.product.mapper.ProductMapper;
 import com.example.shopapp.product.repository.ProductImageRepository;
 import com.example.shopapp.product.repository.ProductRepository;
 import com.example.shopapp.product.specification.ProductSpecification;
+import com.example.shopapp.product.variant.dto.ProductVariantResponse;
+import com.example.shopapp.product.variant.entity.ProductVariant;
+import com.example.shopapp.product.variant.mapper.ProductVariantMapper;
+import com.example.shopapp.product.variant.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -36,6 +38,8 @@ public class ProductService {
     private final ProductMapper mapper;
     private final ProductImageRepository imageRepository;
     private final BrandRepository brandRepository;
+    private final ProductVariantRepository variantRepository;
+    private final ProductVariantMapper variantMapper;
 
     public ProductResponse create(ProductRequest request) {
 
@@ -49,14 +53,14 @@ public class ProductService {
                 .name(request.name())
                 .slug(request.slug())
                 .description(request.description())
-                .price(request.price())
-                .stockQuantity(request.stockQuantity())
                 .status(request.status())
-                .brand(brand)
                 .category(category)
+                .brand(brand)
                 .build();
 
-        return mapper.toResponse(repository.save(product));
+        repository.save(product);
+
+        return mapper.toResponse(product);
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +73,7 @@ public class ProductService {
                 ProductSpecification.withFilters(filter);
 
         return repository.findAll(specification, pageable)
-                .map(this::mapProductWithImage);
+                .map(this::mapProduct);
     }
 
     public ProductResponse update(Long id, ProductRequest request) {
@@ -80,13 +84,14 @@ public class ProductService {
 
         Category category = getCategoryOrThrow(request.categoryId());
 
+        Brand brand = getBrandOrThrow(request.brandId());
+
         product.setName(request.name());
         product.setSlug(request.slug());
         product.setDescription(request.description());
-        product.setPrice(request.price());
-        product.setStockQuantity(request.stockQuantity());
         product.setStatus(request.status());
         product.setCategory(category);
+        product.setBrand(brand);
 
         return mapper.toResponse(repository.save(product));
     }
@@ -122,7 +127,7 @@ public class ProductService {
 
         repository.incrementViews(product.getId());
 
-        return mapProductWithImage(product);
+        return mapProduct(product);
     }
 
     @Transactional(readOnly = true)
@@ -140,6 +145,48 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public Page<ProductCardResponse> getProductCards(Pageable pageable) {
+
+        return repository.findProductCards(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public ProductDetailsResponse getProductDetails(String slug) {
+
+        Product product = repository.findBySlugWithImagesAndBrand(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        List<ProductVariantResponse> variants = variantRepository
+                .findByProductIdAndDeletedFalse(product.getId())
+                .stream()
+                .map(v -> new ProductVariantResponse(
+                        v.getId(),
+                        v.getProduct().getId(),
+                        v.getSku(),
+                        v.getPrice(),
+                        v.getStockQuantity()
+                ))
+                .toList();
+
+        List<String> images = product.getImages()
+                .stream()
+                .map(ProductImage::getUrl)
+                .toList();
+
+        return new ProductDetailsResponse(
+                product.getId(),
+                product.getName(),
+                product.getSlug(),
+                product.getDescription(),
+                product.getBrand().getName(),
+                product.getAverageRating(),
+                product.getReviewCount(),
+                images,
+                variants
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductCardResponse> getCatalog(Pageable pageable) {
 
         return repository.findProductCards(pageable);
     }
@@ -168,25 +215,72 @@ public class ProductService {
 
     private ProductResponse mapProductWithImage(Product product) {
 
-        ProductResponse response = mapper.toResponse(product);
+        String mainImage = imageRepository
+                .findMainImageUrl(product.getId())
+                .orElse(null);
+
+        List<ProductVariantResponse> variants = variantRepository
+                .findByProductIdAndDeletedFalse(product.getId())
+                .stream()
+                .map(this::mapVariant)
+                .toList();
+
+        return new ProductResponse(
+                product.getId(),
+                product.getName(),
+                product.getSlug(),
+                product.getDescription(),
+                product.getStatus(),
+                product.getCategory().getId(),
+                product.getBrand().getName(),
+                mainImage,
+                product.getAverageRating(),
+                product.getReviewCount(),
+                variants,
+                product.getCreatedAt(),
+                product.getUpdatedAt()
+        );
+    }
+
+    private ProductResponse mapProduct(Product product) {
+
+        ProductResponse base = mapper.toResponse(product);
 
         String mainImage = imageRepository
                 .findMainImageUrl(product.getId())
                 .orElse(null);
 
+        List<ProductVariantResponse> variants =
+                variantRepository.findByProductId(product.getId())
+                        .stream()
+                        .map(variantMapper::toResponse)
+                        .toList();
+
         return new ProductResponse(
-                response.id(),
-                response.name(),
-                response.slug(),
-                response.description(),
-                response.price(),
-                response.stockQuantity(),
-                response.status(),
-                response.categoryId(),
+                base.id(),
+                base.name(),
+                base.slug(),
+                base.description(),
+                base.status(),
+                base.categoryId(),
+                base.brandName(),
                 mainImage,
-                response.brandName(),
-                response.createdAt(),
-                response.updatedAt()
+                product.getAverageRating(),
+                product.getReviewCount(),
+                variants,
+                base.createdAt(),
+                base.updatedAt()
+        );
+    }
+
+    private ProductVariantResponse mapVariant(ProductVariant variant) {
+
+        return new ProductVariantResponse(
+                variant.getId(),
+                variant.getProduct().getId(),
+                variant.getSku(),
+                variant.getPrice(),
+                variant.getStockQuantity()
         );
     }
 }

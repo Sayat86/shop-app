@@ -1,6 +1,7 @@
 package com.example.shopapp.order.entity;
 
 import com.example.shopapp.product.entity.Product;
+import com.example.shopapp.product.variant.entity.ProductVariant;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,16 +25,22 @@ public class OrderItem {
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @JoinColumn(name = "variant_id", nullable = false)
+    private ProductVariant variant;
 
-    // Snapshot цены на момент покупки
+    @Column(nullable = false)
+    private String productName;
+
+    @Column(nullable = false)
+    private String sku;
+
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal price;
 
     @Column(nullable = false)
     private Integer quantity;
 
-    @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal subtotal;
+    public BigDecimal getSubtotal() {
+        return price.multiply(BigDecimal.valueOf(quantity));
+    }
 }

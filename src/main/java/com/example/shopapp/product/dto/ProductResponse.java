@@ -1,9 +1,11 @@
 package com.example.shopapp.product.dto;
 
 import com.example.shopapp.product.entity.ProductStatus;
+import com.example.shopapp.product.variant.dto.ProductVariantResponse;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ProductResponse(
 
@@ -11,13 +13,18 @@ public record ProductResponse(
         String name,
         String slug,
         String description,
-        BigDecimal price,
-        Integer stockQuantity,
+
         ProductStatus status,
+
         Long categoryId,
+        String brandName,
 
         String mainImageUrl,
-        String brandName,
+
+        Double averageRating,
+        Integer reviewCount,
+
+        List<ProductVariantResponse> variants,
 
         LocalDateTime createdAt,
         LocalDateTime updatedAt

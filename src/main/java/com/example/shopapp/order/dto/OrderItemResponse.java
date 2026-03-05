@@ -4,9 +4,10 @@ import java.math.BigDecimal;
 
 public record OrderItemResponse(
 
-        Long productId,
+        Long variantId,
         String productName,
         BigDecimal price,
         Integer quantity,
         BigDecimal subtotal
+
 ) {}

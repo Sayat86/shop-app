@@ -6,11 +6,14 @@ import com.example.shopapp.cart.dto.CartResponse;
 import com.example.shopapp.cart.dto.UpdateCartItemRequest;
 import com.example.shopapp.cart.entity.Cart;
 import com.example.shopapp.cart.entity.CartItem;
+import com.example.shopapp.cart.repository.CartItemRepository;
 import com.example.shopapp.cart.repository.CartRepository;
 import com.example.shopapp.exception.BadRequestException;
 import com.example.shopapp.exception.ResourceNotFoundException;
 import com.example.shopapp.product.entity.Product;
 import com.example.shopapp.product.repository.ProductRepository;
+import com.example.shopapp.product.variant.entity.ProductVariant;
+import com.example.shopapp.product.variant.repository.ProductVariantRepository;
 import com.example.shopapp.security.SecurityUtils;
 import com.example.shopapp.user.entity.User;
 import com.example.shopapp.user.repository.UserRepository;
@@ -30,6 +33,8 @@ public class CartService {
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository variantRepository;
+    private final CartItemRepository cartItemRepository;
 
     // ================= CORE METHOD =================
 
@@ -37,7 +42,7 @@ public class CartService {
 
         Long userId = SecurityUtils.getCurrentUserId();
 
-        return cartRepository.findByUserId(userId)
+        return cartRepository.findCartWithItems(userId)
                 .orElseGet(() -> createCart(userId));
     }
 
@@ -45,25 +50,22 @@ public class CartService {
 
         Cart cart = getOrCreateCart();
 
-        Product product = productRepository.findById(request.productId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+        ProductVariant variant = variantRepository.findById(request.variantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
 
-        if (product.getStockQuantity() < request.quantity()) {
+        if (variant.getStockQuantity() < request.quantity()) {
             throw new BadRequestException("Not enough stock available");
         }
 
-        // Проверяем, есть ли уже товар в корзине
-        Optional<CartItem> existingItem = cart.getItems()
-                .stream()
-                .filter(item -> item.getProduct().getId().equals(request.productId()))
-                .findFirst();
+        Optional<CartItem> existingItem = cartItemRepository
+                .findByCartIdAndVariantId(cart.getId(), variant.getId());
 
         if (existingItem.isPresent()) {
 
             CartItem item = existingItem.get();
             int newQuantity = item.getQuantity() + request.quantity();
 
-            if (product.getStockQuantity() < newQuantity) {
+            if (variant.getStockQuantity() < newQuantity) {
                 throw new BadRequestException("Not enough stock available");
             }
 
@@ -73,50 +75,46 @@ public class CartService {
 
             CartItem newItem = CartItem.builder()
                     .cart(cart)
-                    .product(product)
+                    .variant(variant)
                     .quantity(request.quantity())
                     .build();
 
-            cart.getItems().add(newItem);
+            cartItemRepository.save(newItem);
         }
 
-        return mapToResponse(cart);
+        return getCart();
     }
 
-    public CartResponse updateQuantity(Long productId, UpdateCartItemRequest request) {
+    public CartResponse updateQuantity(Long variantId, UpdateCartItemRequest request) {
 
         Cart cart = getOrCreateCart();
 
-        CartItem item = cart.getItems()
-                .stream()
-                .filter(i -> i.getProduct().getId().equals(productId))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found in cart"));
+        CartItem item = cartItemRepository
+                .findByCartIdAndVariantId(cart.getId(), variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found in cart"));
 
-        Product product = item.getProduct();
+        ProductVariant variant = item.getVariant();
 
-        if (product.getStockQuantity() < request.quantity()) {
+        if (variant.getStockQuantity() < request.quantity()) {
             throw new BadRequestException("Not enough stock available");
         }
 
         item.setQuantity(request.quantity());
 
-        return mapToResponse(cart);
+        return getCart();
     }
 
-    public CartResponse removeFromCart(Long productId) {
+    public CartResponse removeFromCart(Long variantId) {
 
         Cart cart = getOrCreateCart();
 
-        CartItem item = cart.getItems()
-                .stream()
-                .filter(i -> i.getProduct().getId().equals(productId))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found in cart"));
+        CartItem item = cartItemRepository
+                .findByCartIdAndVariantId(cart.getId(), variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found in cart"));
 
-        cart.getItems().remove(item);
+        cartItemRepository.delete(item);
 
-        return mapToResponse(cart);
+        return getCart();
     }
 
     @Transactional(readOnly = true)
@@ -124,7 +122,7 @@ public class CartService {
 
         Long userId = SecurityUtils.getCurrentUserId();
 
-        return cartRepository.findByUserId(userId)
+        return cartRepository.findCartWithItems(userId)
                 .map(this::mapToResponse)
                 .orElseGet(() -> new CartResponse(
                         List.of(),
@@ -161,14 +159,19 @@ public class CartService {
                 .stream()
                 .map(item -> {
 
-                    BigDecimal price = item.getProduct().getPrice();
+                    ProductVariant variant = item.getVariant();
+                    Product product = variant.getProduct();
+
+                    BigDecimal price = variant.getPrice();
+
                     BigDecimal subtotal = price.multiply(
                             BigDecimal.valueOf(item.getQuantity())
                     );
 
                     return new CartItemResponse(
-                            item.getProduct().getId(),
-                            item.getProduct().getName(),
+                            item.getId(),
+                            variant.getId(),
+                            variant.getSku(),
                             price,
                             item.getQuantity(),
                             subtotal

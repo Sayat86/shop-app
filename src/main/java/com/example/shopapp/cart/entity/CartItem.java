@@ -1,6 +1,7 @@
 package com.example.shopapp.cart.entity;
 
 import com.example.shopapp.product.entity.Product;
+import com.example.shopapp.product.variant.entity.ProductVariant;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -8,7 +9,7 @@ import lombok.*;
 @Table(
         name = "cart_items",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"cart_id", "product_id"})
+                @UniqueConstraint(columnNames = {"cart_id", "variant_id"})
         }
 )
 @Getter
@@ -27,8 +28,8 @@ public class CartItem {
     private Cart cart;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @JoinColumn(name = "variant_id", nullable = false)
+    private ProductVariant variant;
 
     @Column(nullable = false)
     private Integer quantity;

@@ -41,12 +41,6 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal price;
-
-    @Column(name = "stock_quantity", nullable = false)
-    private Integer stockQuantity;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ProductStatus status;

@@ -13,5 +13,7 @@ public interface ProductVariantRepository
 
     List<ProductVariant> findByProductId(Long productId);
 
-    Optional<ProductVariant> findBySku(String sku);
+    boolean existsBySkuAndDeletedFalse(String sku);
+
+    List<ProductVariant> findByProductIdAndDeletedFalse(Long productId);
 }

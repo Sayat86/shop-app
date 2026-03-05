@@ -23,6 +23,9 @@ public class ProductVariant {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    private Long version;
+
     @Column(nullable = false, unique = true)
     private String sku;
 
@@ -32,6 +35,12 @@ public class ProductVariant {
     @Column(nullable = false)
     private Integer stockQuantity;
 
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
@@ -39,7 +48,4 @@ public class ProductVariant {
     @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<VariantAttributeValue> attributes = new ArrayList<>();
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
 }

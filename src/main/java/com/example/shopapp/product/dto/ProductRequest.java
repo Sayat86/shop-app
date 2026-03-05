@@ -9,26 +9,13 @@ public record ProductRequest(
 
         @NotBlank
         String name,
-
         @NotBlank
         String slug,
-
         String description,
-
-        @NotNull
-        @DecimalMin("0.00")
-        BigDecimal price,
-
-        @NotNull
-        @PositiveOrZero
-        Integer stockQuantity,
-
         @NotNull
         ProductStatus status,
-
         @NotNull
         Long categoryId,
-
         Long brandId
 
 ) {}

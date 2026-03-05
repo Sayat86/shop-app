@@ -14,6 +14,7 @@ import com.example.shopapp.order.repository.OrderHistoryRepository;
 import com.example.shopapp.order.repository.OrderRepository;
 import com.example.shopapp.order.specification.OrderSpecification;
 import com.example.shopapp.product.entity.Product;
+import com.example.shopapp.product.variant.entity.ProductVariant;
 import com.example.shopapp.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,7 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,7 +39,7 @@ public class OrderService {
 
         Long userId = SecurityUtils.getCurrentUserId();
 
-        Cart cart = cartRepository.findByUserId(userId)
+        Cart cart = cartRepository.findCartWithItems(userId)
                 .orElseThrow(() -> new BadRequestException("Cart is empty"));
 
         if (cart.getItems().isEmpty()) {
@@ -46,55 +47,53 @@ public class OrderService {
         }
 
         Order order = Order.builder()
-                .orderNumber(generateOrderNumber())
                 .user(cart.getUser())
                 .status(OrderStatus.CREATED)
+                .orderNumber(generateOrderNumber())
                 .build();
 
-        BigDecimal total = BigDecimal.ZERO;
+        List<OrderItem> items = new ArrayList<>();
 
         for (CartItem cartItem : cart.getItems()) {
 
-            Product product = cartItem.getProduct();
+            ProductVariant variant = cartItem.getVariant();
+            Product product = variant.getProduct();
 
-            if (product.getStockQuantity() < cartItem.getQuantity()) {
+            if (variant.getStockQuantity() < cartItem.getQuantity()) {
                 throw new BadRequestException(
                         "Not enough stock for product: " + product.getName()
                 );
             }
 
             // уменьшаем stock
-            product.setStockQuantity(
-                    product.getStockQuantity() - cartItem.getQuantity()
+            variant.setStockQuantity(
+                    variant.getStockQuantity() - cartItem.getQuantity()
             );
 
-            BigDecimal price = product.getPrice();
-            BigDecimal subtotal = price.multiply(
-                    BigDecimal.valueOf(cartItem.getQuantity())
-            );
-
-            OrderItem orderItem = OrderItem.builder()
+            // создаём snapshot
+            OrderItem item = OrderItem.builder()
                     .order(order)
-                    .product(product)
-                    .price(price)          // snapshot
+                    .variant(variant)
+                    .productName(product.getName())
+                    .sku(variant.getSku())
+                    .price(variant.getPrice())
                     .quantity(cartItem.getQuantity())
-                    .subtotal(subtotal)
                     .build();
 
-            order.getItems().add(orderItem);
-
-            total = total.add(subtotal);
+            items.add(item);
         }
 
-        order.setTotalAmount(total);
+        order.setItems(items);
 
-        Order savedOrder = orderRepository.save(order);
-        recordEvent(savedOrder, OrderEventType.ORDER_CREATED);
+        orderRepository.save(order);
 
         // очищаем корзину
         cart.getItems().clear();
+        cartRepository.save(cart);
 
-        return mapToResponse(savedOrder);
+        recordEvent(order, OrderEventType.ORDER_CREATED);
+
+        return mapToResponse(order);
     }
 
     @Transactional(readOnly = true)
@@ -237,8 +236,8 @@ public class OrderService {
         List<OrderItemResponse> items = order.getItems()
                 .stream()
                 .map(item -> new OrderItemResponse(
-                        item.getProduct().getId(),
-                        item.getProduct().getName(),
+                        item.getVariant().getId(),
+                        item.getProductName(),
                         item.getPrice(),
                         item.getQuantity(),
                         item.getSubtotal()
@@ -277,10 +276,10 @@ public class OrderService {
 
         for (OrderItem item : order.getItems()) {
 
-            Product product = item.getProduct();
+            ProductVariant variant = item.getVariant();
 
-            product.setStockQuantity(
-                    product.getStockQuantity() + item.getQuantity()
+            variant.setStockQuantity(
+                    variant.getStockQuantity() + item.getQuantity()
             );
         }
     }

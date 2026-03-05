@@ -1,9 +1,6 @@
 package com.example.shopapp.product.controller;
 
-import com.example.shopapp.product.dto.ProductCardResponse;
-import com.example.shopapp.product.dto.ProductFilter;
-import com.example.shopapp.product.dto.ProductRequest;
-import com.example.shopapp.product.dto.ProductResponse;
+import com.example.shopapp.product.dto.*;
 import com.example.shopapp.product.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +39,7 @@ public class ProductController {
         return ResponseEntity.created(location).body(response);
     }
 
-    @GetMapping
+    @GetMapping("/admin")
     public ResponseEntity<Page<ProductResponse>> getAll(
             ProductFilter filter,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
@@ -98,5 +95,19 @@ public class ProductController {
     ) {
 
         return ResponseEntity.ok(service.getProductCards(pageable));
+    }
+
+    @GetMapping("/{slug}")
+    public ResponseEntity<ProductDetailsResponse> getProductDetails(
+            @PathVariable String slug) {
+
+        return ResponseEntity.ok(service.getProductDetails(slug));
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<ProductCardResponse>> getProducts(
+            Pageable pageable) {
+
+        return ResponseEntity.ok(service.getCatalog(pageable));
     }
 }

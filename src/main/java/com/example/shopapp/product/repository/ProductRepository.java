@@ -50,14 +50,30 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
            p.id,
            p.name,
            p.slug,
-           p.price,
+           min(v.price),
            i.url,
            p.averageRating,
            p.reviewCount
        )
        from Product p
-       left join p.images i
-       where (i.mainImage = true or i.id is null)
+       left join ProductVariant v
+            on v.product.id = p.id
+            and v.deleted = false
+       left join ProductImage i
+            on i.product.id = p.id
+            and i.mainImage = true
+       where p.deleted = false
+       group by p.id, p.name, p.slug, i.url, p.averageRating, p.reviewCount
        """)
     Page<ProductCardResponse> findProductCards(Pageable pageable);
+
+    @Query("""
+       select distinct p
+       from Product p
+       left join fetch p.images
+       left join fetch p.brand
+       where p.slug = :slug
+       """)
+    Optional<Product> findBySlugWithImagesAndBrand(String slug);
+
 }

@@ -9,7 +9,8 @@ import org.mapstruct.Mapping;
 public interface ProductMapper {
 
     @Mapping(target = "categoryId", source = "category.id")
+    @Mapping(target = "brandName", source = "brand.name")
     @Mapping(target = "mainImageUrl", ignore = true)
-    @Mapping(target = "brandName", source = "brand.name", defaultValue = "")
+    @Mapping(target = "variants", ignore = true)
     ProductResponse toResponse(Product product);
 }

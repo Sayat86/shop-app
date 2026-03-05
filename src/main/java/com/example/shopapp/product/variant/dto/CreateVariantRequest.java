@@ -2,9 +2,8 @@ package com.example.shopapp.product.variant.dto;
 
 import java.math.BigDecimal;
 
-public record ProductVariantResponse(
+public record CreateVariantRequest(
 
-        Long id,
         Long productId,
         String sku,
         BigDecimal price,

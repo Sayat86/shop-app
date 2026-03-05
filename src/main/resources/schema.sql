@@ -42,17 +42,14 @@ create table products (
                           slug varchar(255) not null,
                           description text,
 
-                          price numeric(19,2) not null,
-                          stock_quantity integer not null,
-
                           status varchar(50) not null,
 
                           category_id bigint not null,
-                          brand_id bigint not null,
+                          brand_id bigint,
 
                           deleted boolean not null default false,
-
                           views bigint not null default 0,
+
                           average_rating double precision not null default 0,
                           review_count integer not null default 0,
 
@@ -118,16 +115,20 @@ create table carts (
 );
 
 create table cart_items (
+
                             id bigserial primary key,
                             cart_id bigint not null,
-                            product_id bigint not null,
+                            variant_id bigint not null,
                             quantity integer not null,
                             version bigint not null default 0,
-                            constraint fk_cart_item_cart foreign key (cart_id)
-                                references carts(id),
-                            constraint fk_cart_item_product foreign key (product_id)
-                                references products(id),
-                            constraint uq_cart_product unique (cart_id, product_id)
+                            constraint fk_cart_item_cart
+                                foreign key (cart_id)
+                                    references carts(id),
+                            constraint fk_cart_item_variant
+                                foreign key (variant_id)
+                                    references product_variants(id),
+                            constraint uk_cart_variant
+                                unique(cart_id, variant_id)
 );
 
 create table orders (
@@ -142,16 +143,20 @@ create table orders (
 );
 
 create table order_items (
+
                              id bigserial primary key,
                              order_id bigint not null,
-                             product_id bigint not null,
+                             variant_id bigint not null,
+                             product_name varchar(255) not null,
+                             sku varchar(255) not null,
                              price numeric(19,2) not null,
                              quantity integer not null,
-                             subtotal numeric(19,2) not null,
-                             constraint fk_order_item_order foreign key (order_id)
-                                 references orders(id),
-                             constraint fk_order_item_product foreign key (product_id)
-                                 references products(id)
+                             constraint fk_order_item_order
+                                 foreign key (order_id)
+                                     references orders(id),
+                             constraint fk_order_item_variant
+                                 foreign key (variant_id)
+                                     references product_variants(id)
 );
 
 CREATE TABLE payments (
@@ -190,11 +195,13 @@ create table brands (
 );
 
 create table product_variants (
+
                                   id bigserial primary key,
                                   sku varchar(255) not null unique,
+                                  product_id bigint not null,
                                   price numeric(19,2) not null,
                                   stock_quantity integer not null,
-                                  product_id bigint not null,
+                                  deleted boolean not null default false,
                                   created_at timestamp,
                                   constraint fk_variant_product
                                       foreign key (product_id)
@@ -204,8 +211,8 @@ create table product_variants (
 create index idx_variant_product
     on product_variants(product_id);
 
-create index idx_variant_sku
-    on product_variants(sku);
+create index idx_variant_price
+    on product_variants(price);
 
 create table variant_attributes (
                                     id bigserial primary key,
