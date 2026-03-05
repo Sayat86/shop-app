@@ -55,6 +55,21 @@ public class Order {
     @Builder.Default
     private List<OrderHistory> history = new ArrayList<>();
 
+    @Column(nullable = false)
+    private String email;
+
+    @Column(nullable = false)
+    private String phone;
+
+    @Column(nullable = false)
+    private String address;
+
+    @Column(nullable = false)
+    private String city;
+
+    @Column(nullable = false)
+    private String postalCode;
+
     public void changeStatus(OrderStatus newStatus) {
 
         if (!this.status.canTransitionTo(newStatus)) {

@@ -138,6 +138,11 @@ create table orders (
                         total_amount numeric(19,2) not null,
                         status varchar(50) not null,
                         created_at timestamp not null,
+                        email varchar(255),
+                        phone varchar(50),
+                        address varchar(255),
+                        city varchar(100),
+                        postal_code varchar(50),
                         constraint fk_order_user foreign key (user_id)
                             references users(id)
 );
@@ -237,3 +242,50 @@ create index idx_variant_attr_variant
 
 create index idx_variant_attr_attribute
     on variant_attribute_values(attribute_id);
+
+create table stock_reservations (
+                                    id bigserial primary key,
+                                    variant_id bigint not null,
+                                    quantity integer not null,
+                                    status varchar(20) not null,
+                                    expires_at timestamp not null,
+
+                                    constraint fk_reservation_variant
+                                        foreign key (variant_id)
+                                            references product_variants(id)
+);
+
+CREATE MATERIALIZED VIEW product_catalog AS
+
+SELECT
+    p.id,
+    p.name,
+    p.slug,
+    MIN(v.price) AS price,
+    i.url AS image_url,
+    p.average_rating,
+    p.review_count
+
+FROM products p
+
+         LEFT JOIN product_variants v
+                   ON v.product_id = p.id AND v.deleted = false
+
+         LEFT JOIN product_images i
+                   ON i.product_id = p.id AND i.main_image = true
+
+WHERE p.deleted = false
+
+GROUP BY
+    p.id,
+    p.name,
+    p.slug,
+    i.url,
+    p.average_rating,
+    p.review_count;
+
+CREATE INDEX idx_catalog_slug
+    ON product_catalog(slug);
+
+CREATE INDEX idx_catalog_price
+    ON product_catalog(price);

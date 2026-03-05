@@ -5,11 +5,9 @@ import com.example.shopapp.cart.entity.CartItem;
 import com.example.shopapp.cart.repository.CartRepository;
 import com.example.shopapp.exception.BadRequestException;
 import com.example.shopapp.exception.ResourceNotFoundException;
-import com.example.shopapp.order.dto.OrderFilter;
-import com.example.shopapp.order.dto.OrderHistoryResponse;
-import com.example.shopapp.order.dto.OrderItemResponse;
-import com.example.shopapp.order.dto.OrderResponse;
+import com.example.shopapp.order.dto.*;
 import com.example.shopapp.order.entity.*;
+import com.example.shopapp.order.event.OrderCreatedEvent;
 import com.example.shopapp.order.repository.OrderHistoryRepository;
 import com.example.shopapp.order.repository.OrderRepository;
 import com.example.shopapp.order.specification.OrderSpecification;
@@ -17,6 +15,7 @@ import com.example.shopapp.product.entity.Product;
 import com.example.shopapp.product.variant.entity.ProductVariant;
 import com.example.shopapp.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -34,6 +33,7 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
     private final OrderHistoryRepository orderHistoryRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public OrderResponse createOrderFromCart() {
 
@@ -86,6 +86,10 @@ public class OrderService {
         order.setItems(items);
 
         orderRepository.save(order);
+
+        eventPublisher.publishEvent(
+                new OrderCreatedEvent(order.getId(), order.getOrderNumber())
+        );
 
         // очищаем корзину
         cart.getItems().clear();
@@ -229,6 +233,57 @@ public class OrderService {
                         h.getCreatedAt()
                 ))
                 .toList();
+    }
+
+    public OrderResponse checkout(CheckoutRequest request) {
+
+        Long userId = SecurityUtils.getCurrentUserId();
+
+        Cart cart = cartRepository.findCartWithItems(userId)
+                .orElseThrow(() -> new BadRequestException("Cart is empty"));
+
+        if (cart.getItems().isEmpty()) {
+            throw new BadRequestException("Cart is empty");
+        }
+
+        Order order = Order.builder()
+                .user(cart.getUser())
+                .status(OrderStatus.CREATED)
+                .orderNumber(generateOrderNumber())
+                .email(request.email())
+                .phone(request.phone())
+                .address(request.address())
+                .city(request.city())
+                .postalCode(request.postalCode())
+                .build();
+
+        List<OrderItem> items = new ArrayList<>();
+
+        for (CartItem cartItem : cart.getItems()) {
+
+            ProductVariant variant = cartItem.getVariant();
+
+            OrderItem item = OrderItem.builder()
+                    .order(order)
+                    .variant(variant)
+                    .productName(variant.getProduct().getName())
+                    .sku(variant.getSku())
+                    .price(variant.getPrice())
+                    .quantity(cartItem.getQuantity())
+                    .build();
+
+            items.add(item);
+        }
+
+        order.setItems(items);
+
+        orderRepository.save(order);
+
+        cart.getItems().clear();
+
+        recordEvent(order, OrderEventType.ORDER_CREATED);
+
+        return mapToResponse(order);
     }
 
     private OrderResponse mapToResponse(Order order) {

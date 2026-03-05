@@ -18,10 +18,7 @@ public enum OrderStatus {
                     target == SHIPPED ||
                             target == CANCELLED;
 
-            case SHIPPED ->
-                    false;
-
-            case CANCELLED ->
+            case SHIPPED, CANCELLED ->
                     false;
         };
     }
