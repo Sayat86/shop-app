@@ -24,6 +24,15 @@ public class PaymentService {
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new RuntimeException("Order cannot be paid in status: " + order.getStatus());
+        }
+
+        paymentRepository.findByOrderOrderNumber(orderNumber)
+                .ifPresent(p -> {
+                    throw new RuntimeException("Payment already exists for this order");
+                });
+
         Payment payment = Payment.builder()
                 .order(order)
                 .amount(order.getTotalAmount())
@@ -46,9 +55,14 @@ public class PaymentService {
             throw new RuntimeException("Payment already completed");
         }
 
+        Order order = payment.getOrder();
+
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new RuntimeException("Order cannot be paid in status: " + order.getStatus());
+        }
+
         payment.setStatus(PaymentStatus.SUCCESS);
 
-        Order order = payment.getOrder();
         order.changeStatus(OrderStatus.PAID);
 
         return mapToResponse(payment);
