@@ -1,0 +1,12 @@
+package com.example.shopapp.payment.repository;
+
+import com.example.shopapp.payment.entity.Payment;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface PaymentRepository extends JpaRepository<Payment, Long> {
+
+    Optional<Payment> findByOrderOrderNumber(String orderNumber);
+
+}

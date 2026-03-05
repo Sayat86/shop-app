@@ -289,3 +289,16 @@ CREATE INDEX idx_catalog_slug
 
 CREATE INDEX idx_catalog_price
     ON product_catalog(price);
+
+create table payments (
+
+                          id bigserial primary key,
+                          order_id bigint not null unique,
+                          amount numeric(19,2) not null,
+                          status varchar(50) not null,
+                          provider varchar(50),
+                          created_at timestamp,
+                          constraint fk_payment_order
+                              foreign key (order_id)
+                                  references orders(id)
+);
