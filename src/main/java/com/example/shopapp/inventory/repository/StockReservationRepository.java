@@ -2,6 +2,7 @@ package com.example.shopapp.inventory.repository;
 
 import com.example.shopapp.inventory.reservation.StockReservation;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -17,4 +18,13 @@ public interface StockReservationRepository
            and r.expiresAt > CURRENT_TIMESTAMP
            """)
     Integer getReservedQuantity(Long variantId);
+
+    @Modifying
+    @Query("""
+       update StockReservation r
+       set r.status = 'EXPIRED'
+       where r.status = 'ACTIVE'
+       and r.expiresAt < CURRENT_TIMESTAMP
+       """)
+    void expireReservations();
 }

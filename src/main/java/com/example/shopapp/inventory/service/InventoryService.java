@@ -23,7 +23,7 @@ public class InventoryService {
 
     public void reserveStock(Long variantId, Integer quantity) {
 
-        ProductVariant variant = variantRepository.findById(variantId)
+        ProductVariant variant = variantRepository.findByIdForUpdate(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
 
         Integer reserved = reservationRepository.getReservedQuantity(variantId);
@@ -42,5 +42,35 @@ public class InventoryService {
                 .build();
 
         reservationRepository.save(reservation);
+    }
+
+    public void confirmReservation(Long reservationId) {
+
+        StockReservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found"));
+
+        if (reservation.getStatus() != ReservationStatus.ACTIVE) {
+            throw new BadRequestException("Reservation is not active");
+        }
+
+        ProductVariant variant = reservation.getVariant();
+
+        variant.setStockQuantity(
+                variant.getStockQuantity() - reservation.getQuantity()
+        );
+
+        reservation.setStatus(ReservationStatus.CONFIRMED);
+    }
+
+    public void releaseReservation(Long reservationId) {
+
+        StockReservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found"));
+
+        if (reservation.getStatus() != ReservationStatus.ACTIVE) {
+            return;
+        }
+
+        reservation.setStatus(ReservationStatus.CANCELLED);
     }
 }

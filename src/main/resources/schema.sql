@@ -1,9 +1,11 @@
-CREATE TABLE users (
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+
+CREATE TABLE IF NOT EXISTS users (
                        id BIGSERIAL PRIMARY KEY,
                        email VARCHAR(255) NOT NULL UNIQUE,
                        password VARCHAR(255) NOT NULL,
-                       first_name VARCHAR(255),
-                       last_name VARCHAR(255),
+                       username VARCHAR(255),
                        role VARCHAR(50) NOT NULL,
                        enabled BOOLEAN DEFAULT TRUE,
                        deleted boolean not null default false,
@@ -11,16 +13,16 @@ CREATE TABLE users (
                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_users_email ON users(email);
-CREATE UNIQUE INDEX unique_email_active
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE UNIQUE INDEX IF NOT EXISTS unique_email_active
     ON users(email)
     WHERE deleted = false;
 
-CREATE UNIQUE INDEX unique_username_active
+CREATE UNIQUE INDEX IF NOT EXISTS unique_username_active
     ON users(username)
     WHERE deleted = false;
 
-create table categories (
+create table IF NOT EXISTS categories (
                             id bigserial primary key,
                             name varchar(255) not null,
                             slug varchar(255) not null unique,
@@ -32,70 +34,101 @@ create table categories (
                             constraint fk_parent foreign key (parent_id) references categories(id)
 );
 
-CREATE INDEX idx_categories_slug ON categories(slug);
+CREATE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug);
 
-create table products (
-                          id bigserial primary key,
-                          version bigint not null default 0,
+create table IF NOT EXISTS brands (
+                                      id bigserial primary key,
+                                      name varchar(255) not null,
+    slug varchar(255) not null unique,
+    created_at timestamp
+    );
 
-                          name varchar(255) not null,
-                          slug varchar(255) not null,
-                          description text,
+CREATE TABLE IF NOT EXISTS products (
 
-                          status varchar(50) not null,
+                                        id BIGSERIAL PRIMARY KEY,
+                                        version BIGINT NOT NULL DEFAULT 0,
 
-                          category_id bigint not null,
-                          brand_id bigint,
+                                        name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    description TEXT,
 
-                          deleted boolean not null default false,
-                          views bigint not null default 0,
+    status VARCHAR(50) NOT NULL,
 
-                          average_rating double precision not null default 0,
-                          review_count integer not null default 0,
+    deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    views BIGINT NOT NULL DEFAULT 0,
 
-                          created_at timestamp,
-                          updated_at timestamp,
+    average_rating DOUBLE PRECISION NOT NULL DEFAULT 0,
+    review_count INTEGER NOT NULL DEFAULT 0,
 
-                          constraint fk_product_category
-                              foreign key (category_id)
-                                  references categories(id),
+    category_id BIGINT NOT NULL,
+    brand_id BIGINT NOT NULL,
 
-                          constraint fk_product_brand
-                              foreign key (brand_id)
-                                  references brands(id)
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+
+    CONSTRAINT fk_product_category
+    FOREIGN KEY (category_id)
+    REFERENCES categories(id),
+
+    CONSTRAINT fk_product_brand
+    FOREIGN KEY (brand_id)
+    REFERENCES brands(id)
 );
 
--- категория + фильтры
-create index idx_product_category_status_price
-    on products(category_id, status, price);
+-- slug (soft delete)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_product_slug_active
+    ON products(slug)
+    WHERE deleted = false;
 
--- сортировка
-create index idx_product_created_at
-    on products(created_at desc);
+-- категория
+CREATE INDEX IF NOT EXISTS idx_product_category
+    ON products(category_id);
+
+-- бренд
+CREATE INDEX IF NOT EXISTS idx_product_brand
+    ON products(brand_id);
 
 -- популярные товары
-create index idx_product_views
-    on products(views desc);
+CREATE INDEX IF NOT EXISTS idx_product_views
+    ON products(views DESC);
 
--- slug (для soft delete)
-create unique index idx_product_slug_active
-    on products(slug)
-    where deleted = false;
+-- сортировка новых товаров
+CREATE INDEX IF NOT EXISTS idx_product_created_at
+    ON products(created_at DESC);
 
 -- поиск
-create extension if not exists pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-create index idx_product_category
-    on products(category_id);
+CREATE INDEX IF NOT EXISTS idx_product_name_trgm
+    ON products
+    USING gin (lower(name) gin_trgm_ops);
 
-create index idx_product_brand
-    on products(brand_id);
+create table IF NOT EXISTS product_variants (
 
-create index idx_product_name_trgm
-    on products
-    using gin (lower(name) gin_trgm_ops);
+                                                id bigserial primary key,
+                                                sku varchar(255) not null unique,
+    product_id bigint not null,
+    price numeric(19,2) not null,
+    stock_quantity integer not null,
+    deleted boolean not null default false,
+    created_at timestamp,
+    constraint fk_variant_product
+    foreign key (product_id)
+    references products(id)
+    );
 
-create table product_images (
+create index IF NOT EXISTS idx_variant_product
+    on product_variants(product_id);
+
+create index IF NOT EXISTS idx_variant_price
+    on product_variants(price);
+
+create table IF NOT EXISTS variant_attributes (
+                                                  id bigserial primary key,
+                                                  name varchar(255) not null
+    );
+
+create table IF NOT EXISTS product_images (
                                 id bigserial primary key,
                                 product_id bigint not null,
                                 url text not null,
@@ -104,8 +137,10 @@ create table product_images (
                                 constraint fk_product_image_product
                                     foreign key (product_id) references products(id)
 );
+create index IF NOT EXISTS idx_product_images_product
+    on product_images(product_id);
 
-create table carts (
+create table IF NOT EXISTS carts (
                        id bigserial primary key,
                        user_id bigint not null unique,
                        created_at timestamp,
@@ -114,7 +149,7 @@ create table carts (
                            references users(id)
 );
 
-create table cart_items (
+create table IF NOT EXISTS cart_items (
 
                             id bigserial primary key,
                             cart_id bigint not null,
@@ -130,8 +165,10 @@ create table cart_items (
                             constraint uk_cart_variant
                                 unique(cart_id, variant_id)
 );
+create index IF NOT EXISTS idx_cart_item_variant
+    on cart_items(variant_id);
 
-create table orders (
+create table IF NOT EXISTS orders (
                         id bigserial primary key,
                         order_number varchar(50) UNIQUE,
                         user_id bigint not null,
@@ -147,7 +184,7 @@ create table orders (
                             references users(id)
 );
 
-create table order_items (
+create table IF NOT EXISTS order_items (
 
                              id bigserial primary key,
                              order_id bigint not null,
@@ -163,18 +200,10 @@ create table order_items (
                                  foreign key (variant_id)
                                      references product_variants(id)
 );
+create index IF NOT EXISTS idx_order_item_order
+    on order_items(order_id);
 
-CREATE TABLE payments (
-                          id BIGSERIAL PRIMARY KEY,
-                          order_id BIGINT NOT NULL REFERENCES orders(id),
-                          provider VARCHAR(50),
-                          status VARCHAR(30),
-                          transaction_id VARCHAR(255),
-                          amount BIGINT NOT NULL,
-                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE refresh_tokens (
+CREATE TABLE IF NOT EXISTS refresh_tokens (
                                 id BIGSERIAL PRIMARY KEY,
                                 token VARCHAR(512) NOT NULL UNIQUE,
                                 user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -183,7 +212,7 @@ CREATE TABLE refresh_tokens (
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-create table order_history (
+create table IF NOT EXISTS order_history (
                                id bigserial primary key,
                                order_id bigint not null,
                                event_type varchar(50) not null,
@@ -192,39 +221,7 @@ create table order_history (
                                    foreign key (order_id) references orders(id)
 );
 
-create table brands (
-                        id bigserial primary key,
-                        name varchar(255) not null,
-                        slug varchar(255) not null unique,
-                        created_at timestamp
-);
-
-create table product_variants (
-
-                                  id bigserial primary key,
-                                  sku varchar(255) not null unique,
-                                  product_id bigint not null,
-                                  price numeric(19,2) not null,
-                                  stock_quantity integer not null,
-                                  deleted boolean not null default false,
-                                  created_at timestamp,
-                                  constraint fk_variant_product
-                                      foreign key (product_id)
-                                          references products(id)
-);
-
-create index idx_variant_product
-    on product_variants(product_id);
-
-create index idx_variant_price
-    on product_variants(price);
-
-create table variant_attributes (
-                                    id bigserial primary key,
-                                    name varchar(255) not null
-);
-
-create table variant_attribute_values (
+create table IF NOT EXISTS variant_attribute_values (
                                           id bigserial primary key,
                                           variant_id bigint not null,
                                           attribute_id bigint not null,
@@ -237,24 +234,13 @@ create table variant_attribute_values (
                                                   references variant_attributes(id)
 );
 
-create index idx_variant_attr_variant
+create index IF NOT EXISTS idx_variant_attr_variant
     on variant_attribute_values(variant_id);
 
-create index idx_variant_attr_attribute
+create index IF NOT EXISTS idx_variant_attr_attribute
     on variant_attribute_values(attribute_id);
 
-create table stock_reservations (
-                                    id bigserial primary key,
-                                    variant_id bigint not null,
-                                    quantity integer not null,
-                                    status varchar(20) not null,
-                                    expires_at timestamp not null,
-
-                                    constraint fk_reservation_variant
-                                        foreign key (variant_id)
-                                            references product_variants(id)
-);
-
+DROP MATERIALIZED VIEW IF EXISTS product_catalog;
 CREATE MATERIALIZED VIEW product_catalog AS
 
 SELECT
@@ -284,13 +270,13 @@ GROUP BY
     p.average_rating,
     p.review_count;
 
-CREATE INDEX idx_catalog_slug
+CREATE INDEX IF NOT EXISTS idx_catalog_slug
     ON product_catalog(slug);
 
-CREATE INDEX idx_catalog_price
+CREATE INDEX IF NOT EXISTS idx_catalog_price
     ON product_catalog(price);
 
-create table payments (
+create table IF NOT EXISTS payments (
 
                           id bigserial primary key,
                           order_id bigint not null unique,
@@ -302,3 +288,18 @@ create table payments (
                               foreign key (order_id)
                                   references orders(id)
 );
+
+create table IF NOT EXISTS stock_reservations (
+
+                                                  id bigserial primary key,
+                                                  variant_id bigint not null,
+                                                  quantity integer not null,
+                                                  status varchar(50) not null default 'ACTIVE',
+    expires_at timestamp not null,
+    constraint fk_reservation_variant
+    foreign key (variant_id)
+    references product_variants(id)
+    );
+
+create index IF NOT EXISTS idx_stock_reservation_expiration
+    on stock_reservations(expires_at);
