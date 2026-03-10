@@ -4,13 +4,18 @@ import com.example.shopapp.brand.entity.Brand;
 import com.example.shopapp.category.entity.Category;
 import com.example.shopapp.inventory.reservation.ReservationStatus;
 import com.example.shopapp.inventory.reservation.StockReservation;
+import com.example.shopapp.product.dto.ProductCardResponse;
+import com.example.shopapp.product.dto.ProductResponse;
 import com.example.shopapp.product.entity.Product;
 import com.example.shopapp.product.entity.ProductStatus;
 import com.example.shopapp.product.variant.entity.ProductVariant;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public class TestDataFactory {
@@ -70,5 +75,40 @@ public class TestDataFactory {
                 .build();
 
         return em.persist(reservation);
+    }
+
+    public static ProductResponse productResponse() {
+
+        return new ProductResponse(
+                1L,
+                "iPhone",
+                "iphone",
+                "Smartphone",
+                ProductStatus.ACTIVE,
+                1L,
+                "Apple",
+                "iphone.jpg",
+                4.8,
+                120,
+                List.of(),
+                LocalDateTime.of(2024,1,1,10,0),
+                LocalDateTime.of(2024,1,1,10,0)
+        );
+    }
+
+    public static ProductCardResponse productCardResponse() {
+        return new ProductCardResponse(
+                1L,
+                "Test product",
+                "test-product",
+                BigDecimal.valueOf(100),
+                "image.jpg",
+                4.5,
+                10
+        );
+    }
+
+    public static Page<ProductCardResponse> productCardPage() {
+        return new PageImpl<>(List.of(productCardResponse()));
     }
 }
