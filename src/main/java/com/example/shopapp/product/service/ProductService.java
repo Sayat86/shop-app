@@ -18,6 +18,8 @@ import com.example.shopapp.product.variant.entity.ProductVariant;
 import com.example.shopapp.product.variant.mapper.ProductVariantMapper;
 import com.example.shopapp.product.variant.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -76,6 +78,7 @@ public class ProductService {
                 .map(this::mapProduct);
     }
 
+    @CacheEvict(value = "product", key = "#request.slug")
     public ProductResponse update(Long id, ProductRequest request) {
 
         Product product = getProductOrThrow(id);
@@ -102,6 +105,7 @@ public class ProductService {
         product.setDeleted(true);
     }
 
+    @Cacheable(cacheNames = "related-products", key = "#slug")
     @Transactional(readOnly = true)
     public List<ProductResponse> getRelatedProducts(String slug, int limit) {
 
@@ -119,6 +123,7 @@ public class ProductService {
                 .toList();
     }
 
+    @Cacheable(value = "product", key = "#slug")
     @Transactional(readOnly = true)
     public ProductResponse getBySlug(String slug) {
 
@@ -130,6 +135,7 @@ public class ProductService {
         return mapProduct(product);
     }
 
+    @Cacheable(cacheNames = "popular-products")
     @Transactional(readOnly = true)
     public List<ProductResponse> getPopularProducts(int limit) {
 
@@ -185,6 +191,7 @@ public class ProductService {
         );
     }
 
+    @Cacheable(value = "catalog", key = "#pageable.pageNumber")
     @Transactional(readOnly = true)
     public Page<ProductCardResponse> getCatalog(Pageable pageable) {
 
