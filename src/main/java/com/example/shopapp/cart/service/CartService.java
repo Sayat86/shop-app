@@ -4,19 +4,13 @@ import com.example.shopapp.cart.dto.AddToCartRequest;
 import com.example.shopapp.cart.dto.CartItemResponse;
 import com.example.shopapp.cart.dto.CartResponse;
 import com.example.shopapp.cart.dto.UpdateCartItemRequest;
-import com.example.shopapp.cart.entity.Cart;
-import com.example.shopapp.cart.entity.CartItem;
-import com.example.shopapp.cart.repository.CartItemRepository;
-import com.example.shopapp.cart.repository.CartRepository;
 import com.example.shopapp.exception.BadRequestException;
 import com.example.shopapp.exception.ResourceNotFoundException;
-import com.example.shopapp.product.entity.Product;
 import com.example.shopapp.product.repository.ProductRepository;
 import com.example.shopapp.product.variant.entity.ProductVariant;
 import com.example.shopapp.product.variant.repository.ProductVariantRepository;
 import com.example.shopapp.security.SecurityUtils;
-import com.example.shopapp.user.entity.User;
-import com.example.shopapp.user.repository.UserRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -26,7 +20,6 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +30,7 @@ public class CartService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
     private final StringRedisTemplate redisTemplate;
+    private final MeterRegistry meterRegistry;
 
     private static final String CART_PREFIX = "cart:user:";
 
@@ -65,6 +59,7 @@ public class CartService {
                 getCartKey(userId),
                 Duration.ofHours(24)
         );
+        meterRegistry.counter("cart.items.added").increment();
 
         return getCart();
     }

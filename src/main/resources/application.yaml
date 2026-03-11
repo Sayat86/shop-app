@@ -20,7 +20,7 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false
 
   servlet:
     multipart:
@@ -32,6 +32,16 @@ spring:
       host: localhost
       port: 6379
       timeout: 2000
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
 
 springdoc:
   api-docs:
