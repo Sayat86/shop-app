@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -117,6 +118,21 @@ public class CartService {
             return new CartResponse(List.of(), BigDecimal.ZERO);
         }
 
+        List<Long> variantIds = entries.keySet()
+                .stream()
+                .map(id -> Long.valueOf((String) id))
+                .toList();
+
+        List<ProductVariant> variants =
+                variantRepository.findAllById(variantIds);
+
+        Map<Long, ProductVariant> variantMap =
+                variants.stream()
+                        .collect(Collectors.toMap(
+                                ProductVariant::getId,
+                                v -> v
+                        ));
+
         List<CartItemResponse> items = entries.entrySet()
                 .stream()
                 .map(entry -> {
@@ -124,14 +140,12 @@ public class CartService {
                     Long variantId = Long.valueOf((String) entry.getKey());
                     Integer quantity = Integer.valueOf((String) entry.getValue());
 
-                    ProductVariant variant = variantRepository.findById(variantId)
-                            .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
+                    ProductVariant variant = variantMap.get(variantId);
 
                     BigDecimal price = variant.getPrice();
 
-                    BigDecimal subtotal = price.multiply(
-                            BigDecimal.valueOf(quantity)
-                    );
+                    BigDecimal subtotal =
+                            price.multiply(BigDecimal.valueOf(quantity));
 
                     return new CartItemResponse(
                             null,
