@@ -26,13 +26,13 @@ public class CartController {
         return ResponseEntity.ok(service.addToCart(request));
     }
 
-    @PutMapping("/items/{productId}")
+    @PutMapping("/items/{variantId}")
     public ResponseEntity<CartResponse> updateQuantity(
-            @PathVariable Long productId,
+            @PathVariable Long variantId,
             @Valid @RequestBody UpdateCartItemRequest request) {
 
         return ResponseEntity.ok(
-                service.updateQuantity(productId, request)
+                service.updateQuantity(variantId, request)
         );
     }
 

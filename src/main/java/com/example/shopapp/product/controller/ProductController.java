@@ -82,11 +82,10 @@ public class ProductController {
     }
 
     @GetMapping("/popular")
-    public ResponseEntity<List<ProductResponse>> getPopularProducts(
-            @RequestParam(defaultValue = "8") int limit
+    public List<ProductResponse> getPopularProducts(
+            @RequestParam(defaultValue = "10") int limit
     ) {
-
-        return ResponseEntity.ok(service.getPopularProducts(limit));
+        return service.getPopularProducts(limit);
     }
 
     @GetMapping("/catalog")

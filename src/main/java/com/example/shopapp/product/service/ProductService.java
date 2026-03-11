@@ -17,6 +17,7 @@ import com.example.shopapp.product.variant.dto.ProductVariantResponse;
 import com.example.shopapp.product.variant.entity.ProductVariant;
 import com.example.shopapp.product.variant.mapper.ProductVariantMapper;
 import com.example.shopapp.product.variant.repository.ProductVariantRepository;
+import com.example.shopapp.product.view.ProductViewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -42,6 +43,7 @@ public class ProductService {
     private final BrandRepository brandRepository;
     private final ProductVariantRepository variantRepository;
     private final ProductVariantMapper variantMapper;
+    private final ProductViewService productViewService;
 
     public ProductResponse create(ProductRequest request) {
 
@@ -130,7 +132,7 @@ public class ProductService {
         Product product = repository.findBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-        repository.incrementViews(product.getId());
+        productViewService.incrementView(product.getId());
 
         return mapProduct(product);
     }
@@ -139,12 +141,14 @@ public class ProductService {
     @Transactional(readOnly = true)
     public List<ProductResponse> getPopularProducts(int limit) {
 
-        Page<Product> products =
-                repository.findByDeletedFalseOrderByViewsDesc(
-                        PageRequest.of(0, limit)
-                );
+        List<Long> ids = productViewService.getTopProducts(limit);
 
-        return products.stream()
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
+        return repository.findAllById(ids)
+                .stream()
                 .map(this::mapProductWithImage)
                 .toList();
     }

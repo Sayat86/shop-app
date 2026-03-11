@@ -18,11 +18,14 @@ import com.example.shopapp.security.SecurityUtils;
 import com.example.shopapp.user.entity.User;
 import com.example.shopapp.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -30,25 +33,20 @@ import java.util.Optional;
 @Transactional
 public class CartService {
 
-    private final CartRepository cartRepository;
-    private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
-    private final CartItemRepository cartItemRepository;
+    private final StringRedisTemplate redisTemplate;
 
-    // ================= CORE METHOD =================
+    private static final String CART_PREFIX = "cart:user:";
 
-    public Cart getOrCreateCart() {
-
-        Long userId = SecurityUtils.getCurrentUserId();
-
-        return cartRepository.findCartWithItems(userId)
-                .orElseGet(() -> createCart(userId));
+    private String getCartKey(Long userId) {
+        return CART_PREFIX + userId;
     }
+
 
     public CartResponse addToCart(AddToCartRequest request) {
 
-        Cart cart = getOrCreateCart();
+        Long userId = SecurityUtils.getCurrentUserId();
 
         ProductVariant variant = variantRepository.findById(request.variantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
@@ -57,123 +55,90 @@ public class CartService {
             throw new BadRequestException("Not enough stock available");
         }
 
-        Optional<CartItem> existingItem = cartItemRepository
-                .findByCartIdAndVariantId(cart.getId(), variant.getId());
-
-        if (existingItem.isPresent()) {
-
-            CartItem item = existingItem.get();
-            int newQuantity = item.getQuantity() + request.quantity();
-
-            if (variant.getStockQuantity() < newQuantity) {
-                throw new BadRequestException("Not enough stock available");
-            }
-
-            item.setQuantity(newQuantity);
-
-        } else {
-
-            CartItem newItem = CartItem.builder()
-                    .cart(cart)
-                    .variant(variant)
-                    .quantity(request.quantity())
-                    .build();
-
-            cartItemRepository.save(newItem);
-        }
+        redisTemplate.opsForHash().increment(
+                getCartKey(userId),
+                request.variantId().toString(),
+                request.quantity()
+        );
+        redisTemplate.expire(
+                getCartKey(userId),
+                Duration.ofHours(24)
+        );
 
         return getCart();
     }
 
+
     public CartResponse updateQuantity(Long variantId, UpdateCartItemRequest request) {
 
-        Cart cart = getOrCreateCart();
+        Long userId = SecurityUtils.getCurrentUserId();
 
-        CartItem item = cartItemRepository
-                .findByCartIdAndVariantId(cart.getId(), variantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Item not found in cart"));
-
-        ProductVariant variant = item.getVariant();
+        ProductVariant variant = variantRepository.findById(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
 
         if (variant.getStockQuantity() < request.quantity()) {
             throw new BadRequestException("Not enough stock available");
         }
 
-        item.setQuantity(request.quantity());
+        redisTemplate.opsForHash().put(
+                getCartKey(userId),
+                variantId.toString(),
+                request.quantity().toString()
+        );
+        redisTemplate.expire(
+                getCartKey(userId),
+                Duration.ofHours(24)
+        );
 
         return getCart();
     }
+
 
     public CartResponse removeFromCart(Long variantId) {
 
-        Cart cart = getOrCreateCart();
+        Long userId = SecurityUtils.getCurrentUserId();
 
-        CartItem item = cartItemRepository
-                .findByCartIdAndVariantId(cart.getId(), variantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Item not found in cart"));
-
-        cartItemRepository.delete(item);
+        redisTemplate.opsForHash()
+                .delete(getCartKey(userId), variantId.toString());
 
         return getCart();
     }
+
 
     @Transactional(readOnly = true)
     public CartResponse getCart() {
 
         Long userId = SecurityUtils.getCurrentUserId();
 
-        return cartRepository.findCartWithItems(userId)
-                .map(this::mapToResponse)
-                .orElseGet(() -> new CartResponse(
-                        List.of(),
-                        BigDecimal.ZERO
-                ));
-    }
+        Map<Object, Object> entries =
+                redisTemplate.opsForHash().entries(getCartKey(userId));
 
-    public CartResponse clearCart() {
+        if (entries.isEmpty()) {
+            return new CartResponse(List.of(), BigDecimal.ZERO);
+        }
 
-        Cart cart = getOrCreateCart();
-
-        cart.getItems().clear();
-
-        return mapToResponse(cart);
-    }
-
-    // ================= PRIVATE =================
-
-    private Cart createCart(Long userId) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Cart cart = Cart.builder()
-                .user(user)
-                .build();
-
-        return cartRepository.save(cart);
-    }
-
-    private CartResponse mapToResponse(Cart cart) {
-
-        List<CartItemResponse> items = cart.getItems()
+        List<CartItemResponse> items = entries.entrySet()
                 .stream()
-                .map(item -> {
+                .map(entry -> {
 
-                    ProductVariant variant = item.getVariant();
-                    Product product = variant.getProduct();
+                    Long variantId = Long.valueOf((String) entry.getKey());
+                    Integer quantity = Integer.valueOf((String) entry.getValue());
+
+                    ProductVariant variant = variantRepository.findById(variantId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
 
                     BigDecimal price = variant.getPrice();
 
                     BigDecimal subtotal = price.multiply(
-                            BigDecimal.valueOf(item.getQuantity())
+                            BigDecimal.valueOf(quantity)
                     );
 
                     return new CartItemResponse(
-                            item.getId(),
-                            variant.getId(),
+                            null,
+                            variantId,
                             variant.getSku(),
                             price,
-                            item.getQuantity(),
+                            quantity,
                             subtotal
                     );
                 })
@@ -184,5 +149,15 @@ public class CartService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return new CartResponse(items, total);
+    }
+
+
+    public CartResponse clearCart() {
+
+        Long userId = SecurityUtils.getCurrentUserId();
+
+        redisTemplate.delete(getCartKey(userId));
+
+        return new CartResponse(List.of(), BigDecimal.ZERO);
     }
 }
