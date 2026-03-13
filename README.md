@@ -1,3 +1,6 @@
+# Shop API
+
+![CI](https://github.com/Sayat86/shop-app/actions/workflows/ci.yml/badge.svg)
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot](https://img.shields.io/badge/SpringBoot-3.x-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-database-blue)
@@ -5,8 +8,6 @@
 ![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-orange)
 ![Grafana](https://img.shields.io/badge/Visualization-Grafana-yellow)
 ![Docker](https://img.shields.io/badge/Docker-containerized-blue)
-
-# Shop API
 
 REST API for an online shop built with Spring Boot.
 
@@ -17,6 +18,7 @@ REST API for an online shop built with Spring Boot.
 * Spring Security
 * PostgreSQL
 * Redis
+* Flyway
 * Prometheus
 * Grafana
 * Docker
@@ -29,8 +31,10 @@ REST API for an online shop built with Spring Boot.
 * Role-based authorization (USER / ADMIN)
 * Pagination and filtering
 * Redis caching
+* Database migrations with Flyway
 * Monitoring with Prometheus and Grafana
 * REST API documentation with Swagger
+* Containerized deployment with Docker
 
 ## Architecture
 
@@ -47,13 +51,19 @@ Prometheus → Grafana
 
 ## Running the project
 
-Clone repository:
+### 1.Clone repository:
 
 git clone https://github.com/Sayat86/shop-app
 
-Run with Docker:
+cd shop-app
 
-docker-compose up
+### 2.Build the application:
+
+mvn clean package
+
+### 3.Run with Docker:
+
+docker compose up --build
 
 ## Services
 
